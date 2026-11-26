@@ -59,12 +59,11 @@ h1 {
 	background: var(--hover);
 }
 
-/* Solid full-width action button. */
+/* Solid action button, sized to its text. */
 .btn-primary {
-	display: block;
-	width: 100%;
+	display: inline-block;
 	min-height: 46px;
-	padding: 9px 12px;
+	padding: 9px 20px;
 	border: 1px solid var(--ink);
 	border-radius: var(--radius);
 	background: var(--ink);

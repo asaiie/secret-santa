@@ -48,8 +48,6 @@
 		align-items: center;
 		gap: 15px;
 		min-height: 62px;
-		max-width: 1120px;
-		margin: auto;
 		padding: 26px 30px 0;
 	}
 	nav {

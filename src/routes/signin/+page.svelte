@@ -4,6 +4,7 @@
 	import { api, type User } from '#lib/api.ts';
 	import type { Name } from '#lib/names.ts';
 	import { refreshSession } from '#lib/session.svelte.ts';
+	import Snowfall from '#lib/Snowfall.svelte';
 
 	let users = $state<User[]>([]);
 	let name = $state<Name | ''>('');
@@ -50,6 +51,8 @@
 	}
 </script>
 
+<Snowfall />
+
 <div class="login">
 <h1>Sign in</h1>
 
@@ -93,11 +96,16 @@
 
 <style>
 	.login {
+		position: relative;
+		z-index: 1; /* above the snow */
 		max-width: 380px;
 		margin: 4vh auto 0;
 	}
 	h1 {
 		font-size: 28px;
+	}
+	.btn-primary {
+		width: 100%;
 	}
 	form {
 		display: grid;
@@ -117,7 +125,7 @@
 		padding: 10px;
 		border: 1px solid var(--line);
 		border-radius: var(--radius);
-		background: transparent;
+		background-color: var(--bg); /* snow drifts behind fields, not through them */
 		font-size: 16px;
 	}
 	select {

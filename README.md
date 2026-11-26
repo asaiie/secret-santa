@@ -1,5 +1,7 @@
 # Secret Santa
 
+Live at https://santa.amitsai.com
+
 SvelteKit (static) frontend + a Cloudflare Worker API, with Cloudflare D1 for storage.
 
 - `src/` — the site (prerendered to `build/`)

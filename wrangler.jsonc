@@ -3,6 +3,7 @@
 	"name": "secret-santa",
 	"main": "worker/index.ts",
 	"compatibility_date": "2026-11-01",
+	"routes": [{ "pattern": "santa.amitsai.com", "custom_domain": true }],
 	"assets": {
 		"directory": "./build",
 		"binding": "ASSETS",
