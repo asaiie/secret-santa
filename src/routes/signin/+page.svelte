@@ -23,19 +23,16 @@
 		}
 	});
 
-	// Clear the fields when switching names.
-	$effect(() => {
-		name;
-		password = '';
+	function onNameChange() {
 		confirmPassword = '';
 		error = '';
-	});
+	}
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!name) return;
 		if (isNew && password !== confirmPassword) {
-			error = "Passwords don't match";
+			error = "Passwords don't match.";
 			return;
 		}
 		busy = true;
@@ -53,14 +50,12 @@
 	}
 </script>
 
-<svelte:head><title>Sign in · Secret Santa</title></svelte:head>
-
 <h1>Sign in</h1>
 
 <form onsubmit={submit}>
 	<label>
-		Who are you?
-		<select bind:value={name} required>
+		<span>Your name</span>
+		<select bind:value={name} onchange={onNameChange} required>
 			<option value="" disabled>Choose your name</option>
 			{#each users as u (u.name)}
 				<option value={u.name}>{u.name}</option>
@@ -68,52 +63,82 @@
 		</select>
 	</label>
 
-	{#if selected}
-		{#if isNew}
-			<p class="hint">First time here. Choose a password.</p>
-			<label>
-				Password
-				<input type="password" bind:value={password} autocomplete="new-password" minlength="4" required />
-			</label>
-			<label>
-				Confirm password
-				<input type="password" bind:value={confirmPassword} autocomplete="new-password" required />
-			</label>
-		{:else}
-			<label>
-				Password
-				<input type="password" bind:value={password} autocomplete="current-password" required />
-			</label>
-		{/if}
-		<button type="submit" disabled={busy}>{isNew ? 'Set password' : 'Sign in'}</button>
+	<label>
+		<span>Password</span>
+		<input
+			type="password"
+			bind:value={password}
+			autocomplete={isNew ? 'new-password' : 'current-password'}
+			minlength={isNew ? 4 : undefined}
+			required
+		/>
+	</label>
+
+	{#if isNew}
+		<label>
+			<span>Confirm password</span>
+			<input type="password" bind:value={confirmPassword} autocomplete="new-password" required />
+		</label>
+		<p class="note">Create a password.</p>
 	{/if}
 
-	{#if error}<p class="error">{error}</p>{/if}
+	{#if error}<p class="note error">{error}</p>{/if}
+
+	<button class="btn-primary" type="submit" disabled={busy}>Sign in</button>
 </form>
 
+<a class="btn-ghost back" href="/">Back to viewing</a>
+
 <style>
+	h1 {
+		font-size: 2.6rem;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		margin: 0 0 1.5rem;
+	}
 	form {
 		display: grid;
-		gap: 1rem;
+		gap: 1.4rem;
 	}
 	label {
 		display: grid;
-		gap: 0.35rem;
+		gap: 0.5rem;
 	}
 	select,
 	input {
-		font: inherit;
-		padding: 0.5rem;
+		width: 100%;
+		height: 3.4rem;
+		padding: 0 1rem;
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+		background: var(--bg);
+		font-size: 1.25rem;
 	}
-	.hint {
-		margin: 0;
-		opacity: 0.75;
+	select {
+		appearance: none;
+		padding-right: 2.75rem;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' fill='none' stroke='%231f1e1c' stroke-width='1.5'%3E%3Cpath d='M1 1l6 6 6-6'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 1rem center;
 	}
-	.error {
-		color: #b3261e;
-		margin: 0;
+	select:invalid {
+		color: var(--muted);
 	}
-	button {
-		justify-self: start;
+	select:focus,
+	input:focus {
+		outline: 2px solid var(--ink);
+		outline-offset: -1px;
+	}
+	.note {
+		margin: -0.4rem 0 0;
+		color: var(--muted);
+		font-size: 1.1rem;
+	}
+	.note.error {
+		color: var(--error);
+	}
+	.back {
+		margin-top: 1.25rem;
+		margin-left: -0.7rem;
 	}
 </style>

@@ -30,8 +30,6 @@
 	}
 </script>
 
-<svelte:head><title>Secret Santa</title></svelte:head>
-
 <h1>Hello, world!</h1>
 
 {#if session.me?.name}
@@ -42,14 +40,9 @@
 	{:else}
 		<p>The draw hasn't happened yet.</p>
 		{#if session.me.isAdmin}
-			<button onclick={draw} disabled={drawing}>{drawing ? 'Drawing…' : 'Run the draw'}</button>
+			<button class="btn-primary" onclick={draw} disabled={drawing}>{drawing ? 'Drawing…' : 'Run the draw'}</button>
 		{/if}
 	{/if}
 	{#if error}<p class="error">{error}</p>{/if}
 {/if}
 
-<style>
-	.error {
-		color: #b3261e;
-	}
-</style>

@@ -1,6 +1,9 @@
 <script lang="ts">
+	import '@fontsource-variable/eb-garamond';
+	import '../app.css';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { api } from '#lib/api.ts';
 	import { session, refreshSession } from '#lib/session.svelte.ts';
 
@@ -15,17 +18,20 @@
 	}
 </script>
 
+<svelte:head><title>Secret Santa</title></svelte:head>
+
 <header>
 	<a class="brand" href="/">Secret Santa</a>
-	{#if session.loaded}
-		{#if session.me?.name}
-			<div class="account">
-				<span>{session.me.name}</span>
-				<button onclick={signOut}>Sign out</button>
-			</div>
-		{:else}
-			<a class="button" href="/signin">Sign in</a>
-		{/if}
+	{#if session.loaded && page.url.pathname !== '/signin'}
+		<nav>
+			{#if session.me?.name}
+				<span class="status">{session.me.name}</span>
+				<button class="btn-ghost" onclick={signOut}>Sign out</button>
+			{:else}
+				<span class="status">View only</span>
+				<a class="btn-ghost" href="/signin">Sign in</a>
+			{/if}
+		</nav>
 	{/if}
 </header>
 
@@ -34,46 +40,30 @@
 </main>
 
 <style>
-	:global(body) {
-		margin: 0;
-		font-family: system-ui, sans-serif;
-		background: #fbf8f3;
-		color: #2a2620;
-	}
-	:global(button),
-	.button {
-		font: inherit;
-		padding: 0.5rem 1rem;
-		border: 1px solid currentColor;
-		border-radius: 999px;
-		background: transparent;
-		color: inherit;
-		text-decoration: none;
-		cursor: pointer;
-	}
-	:global(button:disabled) {
-		opacity: 0.5;
-		cursor: default;
-	}
 	header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 1.25rem;
+		min-height: 4rem;
+		padding: 0.75rem 1.25rem;
 	}
 	.brand {
 		font-weight: 600;
 		color: inherit;
 		text-decoration: none;
 	}
-	.account {
+	nav {
 		display: flex;
-		gap: 0.75rem;
 		align-items: center;
+		gap: 0.25rem;
+	}
+	.status {
+		color: var(--muted);
+		padding: 0.4rem 0.3rem;
 	}
 	main {
-		max-width: 32rem;
+		max-width: 28rem;
 		margin: 0 auto;
-		padding: 2rem 1rem;
+		padding: 1.5rem 1rem 4rem;
 	}
 </style>

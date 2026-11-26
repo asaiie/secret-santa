@@ -1,0 +1,74 @@
+:root {
+	--bg: #ffffff;
+	--ink: #1f1e1c;
+	--muted: #6b6a66;
+	--line: #c8c7c3;
+	--hover: #efeeeb;
+	--error: #b3261e;
+	--radius: 4px;
+	--font: 'EB Garamond Variable', Garamond, Georgia, serif;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font-family: var(--font);
+	font-size: 1.2rem;
+	line-height: 1.4;
+	-webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+	font: inherit;
+	color: inherit;
+}
+
+/* Quiet square button: text until hovered. */
+.btn-ghost {
+	display: inline-block;
+	padding: 0.4rem 0.7rem;
+	border: 0;
+	border-radius: var(--radius);
+	background: transparent;
+	color: var(--muted);
+	text-decoration: none;
+	cursor: pointer;
+	transition: background-color 120ms ease, color 120ms ease;
+}
+.btn-ghost:hover,
+.btn-ghost:focus-visible {
+	background: var(--hover);
+	color: var(--ink);
+}
+
+/* Solid full-width action button. */
+.btn-primary {
+	display: block;
+	width: 100%;
+	padding: 0.85rem 1rem;
+	border: 0;
+	border-radius: var(--radius);
+	background: var(--ink);
+	color: var(--bg);
+	font-weight: 500;
+	cursor: pointer;
+	transition: opacity 120ms ease;
+}
+.btn-primary:hover {
+	opacity: 0.85;
+}
+.btn-primary:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.error {
+	color: var(--error);
+}
