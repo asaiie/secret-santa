@@ -1,0 +1,22 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "secret-santa",
+	"main": "worker/index.ts",
+	"compatibility_date": "2026-11-01",
+	"assets": {
+		"directory": "./build",
+		"binding": "ASSETS",
+		"not_found_handling": "404-page",
+		// API requests go to the Worker; everything else is served straight from ./build.
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "secret-santa",
+			"database_id": "13d8fbb0-fd10-4f51-8131-d4996bbffbe2"
+		}
+	]
+}
