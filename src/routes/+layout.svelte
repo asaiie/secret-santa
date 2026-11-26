@@ -1,5 +1,8 @@
 <script lang="ts">
-	import '@fontsource-variable/eb-garamond';
+	import '@fontsource/ibm-plex-sans/400.css';
+	import '@fontsource/ibm-plex-sans/500.css';
+	import '@fontsource/ibm-plex-sans/600.css';
+	import '@fontsource/ibm-plex-sans/700.css';
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -21,7 +24,6 @@
 <svelte:head><title>Secret Santa</title></svelte:head>
 
 <header>
-	<a class="brand" href="/">Secret Santa</a>
 	{#if session.loaded && page.url.pathname !== '/signin'}
 		<nav>
 			{#if session.me?.name}
@@ -42,28 +44,34 @@
 <style>
 	header {
 		display: flex;
-		justify-content: space-between;
+		justify-content: flex-end;
 		align-items: center;
-		min-height: 4rem;
-		padding: 0.75rem 1.25rem;
-	}
-	.brand {
-		font-weight: 600;
-		color: inherit;
-		text-decoration: none;
+		gap: 15px;
+		min-height: 62px;
+		max-width: 1120px;
+		margin: auto;
+		padding: 26px 30px 0;
 	}
 	nav {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		gap: 4px;
 	}
 	.status {
 		color: var(--muted);
-		padding: 0.4rem 0.3rem;
+		padding: 6px;
 	}
 	main {
-		max-width: 28rem;
-		margin: 0 auto;
-		padding: 1.5rem 1rem 4rem;
+		max-width: 1120px;
+		margin: auto;
+		padding: 32px 30px 65px;
+	}
+	@media (max-width: 700px) {
+		header {
+			padding: 20px 16px 0;
+		}
+		main {
+			padding: 24px 16px 48px;
+		}
 	}
 </style>

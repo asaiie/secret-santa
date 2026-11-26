@@ -30,8 +30,6 @@
 	}
 </script>
 
-<h1>Hello, world!</h1>
-
 {#if session.me?.name}
 	{#if session.me.drawn}
 		{#if recipient}

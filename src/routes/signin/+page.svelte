@@ -50,6 +50,7 @@
 	}
 </script>
 
+<div class="login">
 <h1>Sign in</h1>
 
 <form onsubmit={submit}>
@@ -87,58 +88,64 @@
 	<button class="btn-primary" type="submit" disabled={busy}>Sign in</button>
 </form>
 
-<a class="btn-ghost back" href="/">Back to viewing</a>
+<p><a class="btn-ghost" href="/">Back to viewing</a></p>
+</div>
 
 <style>
+	.login {
+		max-width: 380px;
+		margin: 4vh auto 0;
+	}
 	h1 {
-		font-size: 2.6rem;
-		font-weight: 600;
-		letter-spacing: -0.01em;
-		margin: 0 0 1.5rem;
+		font-size: 28px;
 	}
 	form {
 		display: grid;
-		gap: 1.4rem;
+		gap: 20px;
+		margin-top: 25px;
 	}
 	label {
 		display: grid;
-		gap: 0.5rem;
+		gap: 8px;
+		font-size: 13px;
 	}
 	select,
 	input {
 		width: 100%;
-		height: 3.4rem;
-		padding: 0 1rem;
+		min-width: 0;
+		min-height: 46px;
+		padding: 10px;
 		border: 1px solid var(--line);
 		border-radius: var(--radius);
-		background: var(--bg);
-		font-size: 1.25rem;
+		background: transparent;
+		font-size: 16px;
 	}
 	select {
 		appearance: none;
-		padding-right: 2.75rem;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' fill='none' stroke='%231f1e1c' stroke-width='1.5'%3E%3Cpath d='M1 1l6 6 6-6'/%3E%3C/svg%3E");
+		padding-right: 36px;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none' stroke='%2320211f' stroke-width='1.5'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
 		background-repeat: no-repeat;
-		background-position: right 1rem center;
+		background-position: right 12px center;
 	}
 	select:invalid {
 		color: var(--muted);
 	}
-	select:focus,
-	input:focus {
+	select:focus-visible,
+	input:focus-visible {
 		outline: 2px solid var(--ink);
-		outline-offset: -1px;
+		outline-offset: 3px;
 	}
 	.note {
-		margin: -0.4rem 0 0;
+		margin: 0;
 		color: var(--muted);
-		font-size: 1.1rem;
+		line-height: 1.6;
 	}
 	.note.error {
 		color: var(--error);
 	}
-	.back {
-		margin-top: 1.25rem;
-		margin-left: -0.7rem;
+	@media (max-width: 700px) {
+		.note {
+			font-size: 12px;
+		}
 	}
 </style>
