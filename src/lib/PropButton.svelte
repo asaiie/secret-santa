@@ -6,7 +6,7 @@
 	let {
 		prop,
 		caption,
-		captionAt = 88,
+		captionAt = 91,
 		label,
 		paint,
 		onclick
@@ -24,11 +24,7 @@
 
 	let canvas: HTMLCanvasElement;
 
-	onMount(() => {
-		// Painted once at a fixed resolution; CSS scales it to the layout's size.
-		canvas.width = canvas.height = 480;
-		paint(canvas);
-	});
+	onMount(() => paint(canvas));
 </script>
 
 <button
@@ -36,8 +32,8 @@
 	aria-label={label}
 	style:left="{prop.x}px"
 	style:top="{prop.y}px"
-	style:width="{prop.size}px"
-	style:height="{prop.size}px"
+	style:width="{prop.w}px"
+	style:height="{prop.h}px"
 	{onclick}
 >
 	<span class="caption" style:bottom="{captionAt}%" aria-hidden="true">{caption}</span>

@@ -35,7 +35,7 @@
 
 {#if session.me?.name && scene.treeDone && scene.envelope && scene.scroll}
 	<!-- Not wired up yet. -->
-	<PropButton prop={scene.envelope} caption="Giftee" captionAt={78} label="See who you're giving a gift to" paint={paintEnvelope} />
+	<PropButton prop={scene.envelope} caption="Giftee" label="See who you're giving a gift to" paint={paintEnvelope} />
 	<PropButton prop={scene.scroll} caption="Wishlist" label="Your wishlist" paint={paintScroll} />
 {/if}
 

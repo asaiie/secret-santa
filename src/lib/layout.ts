@@ -3,6 +3,8 @@
  * across the top, the tree centred below it.
  */
 
+import { ENVELOPE, SCROLL } from './paintProps.ts';
+
 /** The tree scene's own coordinate space (see paintTree.ts). */
 // y0 sits just above the star; its faint rays may reach up behind the title.
 export const SCENE = { cx: 450, x0: 140, x1: 780, y0: 105, y1: 1100 };
@@ -15,12 +17,12 @@ export type Layout = {
 	/** The band the title sits in, in viewport px. */
 	titleY: number;
 	titleH: number;
-	/** The envelope (left) and scroll (right) buttons: centre and size in viewport px. */
+	/** The envelope (left) and scroll (right) buttons: centre and box size in viewport px. */
 	envelope: Prop;
 	scroll: Prop;
 };
 
-export type Prop = { x: number; y: number; size: number };
+export type Prop = { x: number; y: number; w: number; h: number };
 
 /**
  * Props sit beside the lowest green tier, their inner edge just overlapping the
@@ -28,7 +30,6 @@ export type Prop = { x: number; y: number; size: number };
  */
 const PROP_Y = 800;
 const PROP_DX = 345; // from the trunk to each prop's centre
-const PROP_SIZE = 180;
 
 /** Height of the notch / status bar inset, from the --safe-top CSS variable. */
 export function safeTop(): number {
@@ -49,13 +50,23 @@ export function computeLayout(VW: number, VH: number, insetTop = 0): Layout {
 	const titleY = top + free * 0.12;
 	const ox = VW / 2 - SCENE.cx * s;
 	const oy = titleY + titleH - SCENE.y0 * s;
-	// On narrow screens the tree fills the width, so props tuck in over the branches
+	// Props are painted in scene units, so at the tree's scale they match the gifts.
+	// On narrow screens the tree fills the width, so they tuck in over the branches
 	// rather than running off the edge.
-	const size = Math.min(PROP_SIZE * s, VW * 0.24, 170);
-	const prop = (dx: number): Prop => {
-		const margin = size / 2 + 6;
+	const ps = Math.min(s, (VW * 0.27) / ENVELOPE.w);
+	const prop = (dx: number, size: { w: number; h: number }): Prop => {
+		const w = size.w * ps;
+		const margin = w / 2 + 4;
 		const x = Math.min(VW - margin, Math.max(margin, ox + (SCENE.cx + dx) * s));
-		return { x, y: oy + PROP_Y * s, size };
+		return { x, y: oy + PROP_Y * s, w, h: size.h * ps };
 	};
-	return { s, ox, oy, titleY, titleH, envelope: prop(-PROP_DX), scroll: prop(PROP_DX) };
+	return {
+		s,
+		ox,
+		oy,
+		titleY,
+		titleH,
+		envelope: prop(-PROP_DX, ENVELOPE),
+		scroll: prop(PROP_DX, SCROLL)
+	};
 }
