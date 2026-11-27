@@ -458,7 +458,11 @@ export function createEnvelope(root) {
       const cw = container.clientWidth || STAGE_W, ch = container.clientHeight || STAGE_H;
       const s = Math.min(1, cw / STAGE_W, ch / STAGE_H);
       const ox = Math.round((cw - STAGE_W * s) / 2 * dpr) / dpr, oy = Math.round((ch - STAGE_H * s) / 2 * dpr) / dpr;
-      canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
+      // Only resize when the size really changes: assigning width/height (even the same value)
+      // wipes the canvas, which showed up as a one-frame blink when the ResizeObserver first fired.
+      const W = Math.round(cw * dpr), H = Math.round(ch * dpr);
+      if (canvas.width !== W) canvas.width = W;
+      if (canvas.height !== H) canvas.height = H;
       const cardX = ox + (CARD_FINAL.x - CARD_FINAL.w / 2) * s, cardY = oy + (CARD_FINAL.y - CARD_FINAL.w * CH / CW / 2) * s;
       cardBox.style.transform = `translate(${cardX}px,${cardY}px) scale(${s})`;
       return { dpr, s, ox, oy };
