@@ -12,14 +12,15 @@
 	 * Two stacked canvases share one seed, so their splotches are identical:
 	 * - `plain`: paper, splotches, snow, grain
 	 * - `withTree`: the same plus the Christmas tree, shown only on the home page
-	 * Plus the title, which fades in above the tree once it's finished.
+	 * Plus the title above the tree, shown from the start.
 	 */
 	let plain: HTMLCanvasElement;
 	let withTree: HTMLCanvasElement;
 	let titleY = $state(0);
 	let titleH = $state(0);
-	let titleIn = $state(false);
-	let titleAnimate = $state(true);
+	// The title's position is measured in the browser; keep it hidden until then
+	// (immediately on load) so it doesn't flash at the top of the page first.
+	let titlePlaced = $state(false);
 
 	const showTree = $derived(page.url.pathname === '/');
 
@@ -30,6 +31,7 @@
 
 		const placeTitle = () => {
 			({ titleY, titleH } = computeLayout(plain.clientWidth, plain.clientHeight, safeTop()));
+			titlePlaced = true;
 		};
 
 		const paintAll = (plainMode: PaintMode, treeMode: PaintMode) => {
@@ -37,16 +39,7 @@
 			placeTitle();
 			stops = [
 				paintTree(plain, { seed, tree: false, mode: plainMode }),
-				paintTree(withTree, {
-					seed,
-					tree: true,
-					mode: treeMode,
-					// Fade the title in as the finishing touch, only if the tree was painted on screen.
-					onDone: () => {
-						titleAnimate = treeMode === 'live';
-						titleIn = true;
-					}
-				})
+				paintTree(withTree, { seed, tree: true, mode: treeMode })
 			];
 		};
 
@@ -85,8 +78,7 @@
 <h1
 	class="title"
 	class:shown={showTree}
-	class:in={titleIn}
-	class:animate={titleAnimate}
+	class:placed={titlePlaced}
 	style:top="{titleY}px"
 	style:height="{titleH}px"
 >
@@ -128,15 +120,8 @@
 		white-space: nowrap;
 		pointer-events: none;
 		visibility: hidden;
-		opacity: 0;
 	}
-	.title.shown {
+	.title.shown.placed {
 		visibility: visible;
-	}
-	.title.in {
-		opacity: 1;
-	}
-	.title.in.animate {
-		transition: opacity 1.2s ease;
 	}
 </style>
