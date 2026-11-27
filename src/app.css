@@ -8,16 +8,24 @@
 	--error: #a83e35;
 	--radius: 2px;
 	--font: 'IBM Plex Sans', system-ui, sans-serif;
+	/* Close to the painted paper, so any edge the painting doesn't reach blends in. */
+	--paper: #f0eff2;
+	/* Notch / status bar clearance when the page runs edge to edge. */
+	--safe-top: env(safe-area-inset-top, 0px);
 }
 
 * {
 	box-sizing: border-box;
 }
 
+html {
+	background: var(--paper);
+}
+
 body {
 	margin: 0;
 	min-height: 100dvh;
-	background: var(--bg);
+	background: var(--paper);
 	color: var(--ink);
 	font-family: var(--font);
 	font-size: 14px;

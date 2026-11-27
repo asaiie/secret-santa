@@ -2,7 +2,7 @@
 	import '@fontsource/cedarville-cursive/400.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { computeLayout } from './layout.ts';
+	import { computeLayout, safeTop } from './layout.ts';
 	import { paintTree, type PaintMode } from './paintTree.ts';
 
 	/**
@@ -29,7 +29,7 @@
 		let stops: (() => void)[] = [];
 
 		const placeTitle = () => {
-			({ titleY, titleH } = computeLayout(window.innerWidth, window.innerHeight));
+			({ titleY, titleH } = computeLayout(plain.clientWidth, plain.clientHeight, safeTop()));
 		};
 
 		const paintAll = (plainMode: PaintMode, treeMode: PaintMode) => {
@@ -55,16 +55,17 @@
 		if (page.url.pathname === '/') paintAll('quick', visible);
 		else paintAll(visible, 'quick');
 
-		// Repaint (instantly, same painting) only when the window really changes size.
-		// Small height changes, like a phone's address bar sliding away, just stretch.
-		let painted = { w: window.innerWidth, h: window.innerHeight };
+		// Repaint (instantly, same painting) only when the canvas really changes size. It's
+		// sized to the largest viewport, so a phone's bars sliding in and out don't count;
+		// rotating or resizing the window does.
+		let painted = { w: plain.clientWidth, h: plain.clientHeight };
 		let timer = 0;
 		const onResize = () => {
 			clearTimeout(timer);
 			timer = window.setTimeout(() => {
-				const w = window.innerWidth;
-				const h = window.innerHeight;
-				if (w === painted.w && Math.abs(h - painted.h) < 140) return;
+				const w = plain.clientWidth;
+				const h = plain.clientHeight;
+				if (w === painted.w && h === painted.h) return;
 				paintAll('instant', 'instant');
 				painted = { w, h };
 			}, 200);
@@ -95,9 +96,12 @@
 <style>
 	canvas {
 		position: fixed;
-		inset: 0;
+		top: 0;
+		left: 0;
 		width: 100%;
-		height: 100%;
+		/* The largest viewport: still covers the screen when a phone's bars slide away. */
+		height: 100vh;
+		height: 100lvh;
 		display: block;
 		z-index: 0;
 		pointer-events: none;

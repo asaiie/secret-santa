@@ -53,7 +53,7 @@
 		align-items: center;
 		gap: 15px;
 		min-height: 62px;
-		padding: 26px 30px 0;
+		padding: calc(26px + var(--safe-top)) 30px 0;
 	}
 	nav {
 		display: flex;
@@ -71,7 +71,7 @@
 	}
 	@media (max-width: 700px) {
 		header {
-			padding: 20px 16px 0;
+			padding: calc(20px + var(--safe-top)) 16px 0;
 		}
 		main {
 			padding: 24px 16px 48px;

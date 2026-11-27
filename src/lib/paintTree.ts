@@ -7,7 +7,7 @@
  * - tree tasks draw in the original 900×1200 scene space, scaled to fit and centred.
  */
 
-import { SCENE, computeLayout } from './layout.ts';
+import { SCENE, computeLayout, safeTop } from './layout.ts';
 
 type Pt = [number, number];
 type Hsl = [number, number, number];
@@ -93,12 +93,13 @@ export function paintTree(
 
 	/* ---------- canvas + transforms ---------- */
 	const dpr = Math.min(window.devicePixelRatio || 1, 2);
-	const VW = window.innerWidth;
-	const VH = window.innerHeight;
+	// The canvas's CSS size: the full screen including areas behind the browser's bars.
+	const VW = canvas.clientWidth || window.innerWidth;
+	const VH = canvas.clientHeight || window.innerHeight;
 	canvas.width = Math.round(VW * dpr);
 	canvas.height = Math.round(VH * dpr);
 
-	const { s, ox, oy } = computeLayout(VW, VH);
+	const { s, ox, oy } = computeLayout(VW, VH, safeTop());
 
 	const tasks: (() => void)[] = [];
 	const screen = () => ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

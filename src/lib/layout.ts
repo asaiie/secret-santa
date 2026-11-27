@@ -17,11 +17,16 @@ export type Layout = {
 	titleH: number;
 };
 
-export function computeLayout(VW: number, VH: number): Layout {
+/** Height of the notch / status bar inset, from the --safe-top CSS variable. */
+export function safeTop(): number {
+	return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-top')) || 0;
+}
+
+export function computeLayout(VW: number, VH: number, insetTop = 0): Layout {
 	// Wide enough that a centred title clears the account controls on the right:
 	// line it up with them in the header row. Otherwise sit just below them.
 	const inHeader = VW >= 760;
-	const top = inHeader ? 26 : 62;
+	const top = (inHeader ? 26 : 62) + insetTop;
 	const titleH = inHeader ? 36 : 40;
 	const sw = SCENE.x1 - SCENE.x0;
 	const sh = SCENE.y1 - SCENE.y0;
