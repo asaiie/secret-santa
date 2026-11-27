@@ -1,7 +1,7 @@
 import type { Name } from './names.ts';
 
 export type User = { name: Name; hasPassword: boolean };
-export type Me = { name: Name | null; isAdmin: boolean; drawn: boolean };
+export type Me = { name: Name | null; isAdmin: boolean; drawn: boolean; revealed: boolean };
 
 async function request<T>(path: string, body?: unknown): Promise<T> {
 	const res = await fetch(path, {
@@ -17,7 +17,6 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 export const api = {
 	users: () => request<User[]>('/api/users'),
 	me: () => request<Me>('/api/me'),
-	recipient: () => request<{ recipient: Name | null }>('/api/recipient'),
 	setPassword: (name: Name, password: string) =>
 		request<{ name: Name }>('/api/set-password', { name, password }),
 	login: (name: Name, password: string) => request<{ name: Name }>('/api/login', { name, password }),

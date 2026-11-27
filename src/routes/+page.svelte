@@ -19,9 +19,9 @@
 
 	async function openGiftee() {
 		if (!session.me?.name) return goto('/signin');
-		// The draw may have happened since the page loaded.
-		if (!session.me.drawn) await refreshSession();
-		if (session.me?.drawn) {
+		// The draw (or the reveal time) may have come since the page loaded.
+		if (!session.me.revealed) await refreshSession();
+		if (session.me?.revealed) {
 			// Same seed as the envelope on the tree, so the one that opens is the one you clicked.
 			gifteeSeed = propSeed('envelope') ?? 1;
 			gifteeOpen = true;

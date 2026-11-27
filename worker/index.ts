@@ -10,6 +10,9 @@ const COOKIE = 'session';
 const SESSION_DAYS = 60;
 const PBKDF2_ITERATIONS = 100_000; // Workers' maximum for PBKDF2
 const MIN_PASSWORD = 4;
+/** Nobody can see their giftee before this, even once the draw has run (3:00 PM EST, Nov 27 2026). */
+const REVEAL_AT = Date.parse('2026-11-27T20:00:00Z');
+const isRevealed = () => Date.now() >= REVEAL_AT;
 
 export default {
 	async fetch(req: Request, env: Env): Promise<Response> {
@@ -38,7 +41,8 @@ async function route(req: Request, env: Env, path: string): Promise<Response> {
 	if (method === 'GET' && path === '/api/me') {
 		const name = await currentUser(req, env);
 		const drawn = await isDrawn(env);
-		return json({ name, isAdmin: name === ADMIN, drawn });
+		// `revealed`: giftees can be opened (the draw has run and the reveal time has passed).
+		return json({ name, isAdmin: name === ADMIN, drawn, revealed: drawn && isRevealed() });
 	}
 
 	if (method === 'GET' && path === '/api/wishlist') {
@@ -52,7 +56,8 @@ async function route(req: Request, env: Env, path: string): Promise<Response> {
 
 	if (method === 'GET' && path === '/api/giftee') {
 		const name = await requireUser(req, env);
-		// Only ever the signed-in person's own giftee, and only once the draw has happened.
+		// Only ever the signed-in person's own giftee, and only once it's been drawn and revealed.
+		if (!isRevealed()) return json({ giftee: null });
 		const row = await env.DB.prepare(
 			`SELECT a.recipient, w.text, w.updated_at FROM assignments a
 			 LEFT JOIN wishlists w ON w.name = a.recipient WHERE a.giver = ?`
@@ -61,15 +66,6 @@ async function route(req: Request, env: Env, path: string): Promise<Response> {
 			.first<{ recipient: string; text: string | null; updated_at: string | null }>();
 		if (!row) return json({ giftee: null });
 		return json({ giftee: { name: row.recipient, wishlist: row.text ?? '', updatedAt: row.updated_at } });
-	}
-
-	if (method === 'GET' && path === '/api/recipient') {
-		const name = await requireUser(req, env);
-		// Only ever returns the signed-in person's own recipient.
-		const row = await env.DB.prepare('SELECT recipient FROM assignments WHERE giver = ?')
-			.bind(name)
-			.first<{ recipient: string }>();
-		return json({ recipient: row?.recipient ?? null });
 	}
 
 	if (method === 'POST') {
