@@ -50,6 +50,19 @@ async function route(req: Request, env: Env, path: string): Promise<Response> {
 		return json({ text: row?.text ?? '', updatedAt: row?.updated_at ?? null });
 	}
 
+	if (method === 'GET' && path === '/api/giftee') {
+		const name = await requireUser(req, env);
+		// Only ever the signed-in person's own giftee, and only once the draw has happened.
+		const row = await env.DB.prepare(
+			`SELECT a.recipient, w.text, w.updated_at FROM assignments a
+			 LEFT JOIN wishlists w ON w.name = a.recipient WHERE a.giver = ?`
+		)
+			.bind(name)
+			.first<{ recipient: string; text: string | null; updated_at: string | null }>();
+		if (!row) return json({ giftee: null });
+		return json({ giftee: { name: row.recipient, wishlist: row.text ?? '', updatedAt: row.updated_at } });
+	}
+
 	if (method === 'GET' && path === '/api/recipient') {
 		const name = await requireUser(req, env);
 		// Only ever returns the signed-in person's own recipient.

@@ -3,7 +3,8 @@
  * across the top, the tree centred below it.
  */
 
-import { ENVELOPE, SCROLL } from './paintProps.ts';
+import { ENVELOPE_BOX } from './envelope/index.ts';
+import { SCROLL } from './paintProps.ts';
 
 /** The tree scene's own coordinate space (see paintTree.ts). */
 // y0 sits just above the star; its faint rays may reach up behind the title.
@@ -54,12 +55,12 @@ export function computeLayout(VW: number, VH: number, insetTop = 0): Layout {
 	// Props are painted in scene units, so at the tree's scale they match the gifts.
 	// On narrow screens the tree fills the width, so they tuck in over the branches
 	// rather than running off the edge.
-	const ps = Math.min(s, (VW * 0.27) / ENVELOPE.w);
-	const prop = (dx: number, size: { w: number; h: number }): Prop => {
+	const ps = Math.min(s, (VW * 0.27) / ENVELOPE_BOX.w);
+	const prop = (dx: number, size: { w: number; h: number }, dy = 0): Prop => {
 		const w = size.w * ps;
 		const margin = w / 2 + 4;
 		const x = Math.min(VW - margin, Math.max(margin, ox + (SCENE.cx + dx) * s));
-		return { x, y: oy + PROP_Y * s, w, h: size.h * ps };
+		return { x, y: oy + (PROP_Y + dy) * s, w, h: size.h * ps };
 	};
 	return {
 		s,
@@ -67,7 +68,8 @@ export function computeLayout(VW: number, VH: number, insetTop = 0): Layout {
 		oy,
 		titleY,
 		titleH,
-		envelope: prop(-PROP_DX, ENVELOPE),
+		// The envelope sits in the bottom 130 of its 180-tall box; keep it where it was.
+		envelope: prop(-PROP_DX, ENVELOPE_BOX, -25),
 		scroll: prop(PROP_DX, SCROLL)
 	};
 }

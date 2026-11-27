@@ -23,6 +23,8 @@ export const api = {
 	login: (name: Name, password: string) => request<{ name: Name }>('/api/login', { name, password }),
 	logout: () => request<{ ok: true }>('/api/logout', {}),
 	draw: () => request<{ ok: true }>('/api/draw', {}),
+	giftee: () =>
+		request<{ giftee: { name: Name; wishlist: string; updatedAt: string | null } | null }>('/api/giftee'),
 	wishlist: () => request<{ text: string; updatedAt: string | null }>('/api/wishlist'),
 	saveWishlist: (text: string) => request<{ updatedAt: string | null }>('/api/wishlist', { text })
 };

@@ -91,3 +91,10 @@ h1 {
 	color: var(--error);
 	line-height: 1.5;
 }
+
+/* Props that are painted all at once fade in after the tree instead. */
+@keyframes prop-fade-in {
+	from {
+		opacity: 0;
+	}
+}

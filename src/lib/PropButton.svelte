@@ -12,6 +12,7 @@
 		paint,
 		paintKey,
 		animate = false,
+		shake = 0,
 		onclick
 	}: {
 		prop: Prop;
@@ -26,10 +27,23 @@
 		paintKey: string;
 		/** Paint it in step by step (first time only). */
 		animate?: boolean;
+		/** Change this number to give the prop a little "not yet" shake. */
+		shake?: number;
 		onclick?: () => void;
 	} = $props();
 
 	let holder: HTMLSpanElement;
+	let shaking = $state(false);
+	let lastShake = 0;
+
+	$effect(() => {
+		if (!shake || shake === lastShake) return;
+		lastShake = shake;
+		shaking = false;
+		requestAnimationFrame(() => (shaking = true));
+		const t = setTimeout(() => (shaking = false), 700);
+		return () => clearTimeout(t);
+	});
 
 	// Reuse the painting from earlier in this page load if there is one.
 	onMount(() => {
@@ -47,7 +61,7 @@
 	{onclick}
 >
 	<!-- Caption and painting scale together as one piece. -->
-	<span class="art">
+	<span class="art" class:shaking>
 		<span class="caption" style:bottom="{captionAt}%" aria-hidden="true">{caption}</span>
 		<span class="holder" bind:this={holder}></span>
 	</span>
@@ -116,6 +130,23 @@
 	}
 	.prop:active .art {
 		transform: scale(1.06);
+	}
+	.art.shaking {
+		animation: not-yet 650ms ease-in-out;
+	}
+	@keyframes not-yet {
+		20% {
+			transform: rotate(-5deg);
+		}
+		40% {
+			transform: rotate(4deg);
+		}
+		60% {
+			transform: rotate(-3deg);
+		}
+		80% {
+			transform: rotate(1.5deg);
+		}
 	}
 	.prop:focus-visible {
 		outline: none;

@@ -202,6 +202,11 @@
 		background: transparent;
 		overflow: visible;
 	}
+	/* The dialog takes focus when it opens; the panel itself is the visible focus. */
+	dialog:focus,
+	dialog:focus-visible {
+		outline: none;
+	}
 	/* No tint: the page stays as it is. The invisible backdrop still catches outside clicks. */
 	dialog::backdrop {
 		background: transparent;
