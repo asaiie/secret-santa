@@ -5,11 +5,18 @@
 	/** A painted prop that works as a button: gold glow, grows and glows brighter on hover. */
 	let {
 		prop,
+		caption,
+		captionAt = 88,
 		label,
 		paint,
 		onclick
 	}: {
 		prop: Prop;
+		/** Short visible label above the prop. */
+		caption: string;
+		/** Caption's baseline, as % of the prop's height from the bottom (painted art doesn't fill the square). */
+		captionAt?: number;
+		/** Fuller description for screen readers. */
 		label: string;
 		paint: (canvas: HTMLCanvasElement) => void;
 		onclick?: () => void;
@@ -33,6 +40,7 @@
 	style:height="{prop.size}px"
 	{onclick}
 >
+	<span class="caption" style:bottom="{captionAt}%" aria-hidden="true">{caption}</span>
 	<canvas bind:this={canvas} aria-hidden="true"></canvas>
 </button>
 
@@ -47,6 +55,15 @@
 		cursor: pointer;
 		-webkit-tap-highlight-color: transparent;
 		animation: appear 450ms ease-out both;
+	}
+	.caption {
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+		font: inherit;
+		font-size: 14px;
+		color: var(--muted);
+		white-space: nowrap;
 	}
 	canvas {
 		display: block;

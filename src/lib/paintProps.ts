@@ -65,20 +65,28 @@ function kit(canvas: HTMLCanvasElement, seed: number) {
 		for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
 		if (close) ctx.closePath();
 	}
-	/** Opaque-ish base so the prop reads over the busy background. */
+	/**
+	 * Body colour, built from many translucent, slightly different layers (like the
+	 * tree's baubles) so it reads solid over the background but has soft edges.
+	 */
 	function base(poly: Pt[], c: Hsl, a = 0.97) {
+		const shape = deform(poly, 2, 0.025);
+		const layers = 14;
+		const per = 1 - Math.pow(1 - a, 1 / layers);
 		ctx.save();
 		ctx.globalCompositeOperation = 'source-over';
-		path(deform(poly, 2, 0.008));
-		ctx.fillStyle = hsla(c, a);
-		ctx.fill();
+		for (let i = 0; i < layers; i++) {
+			path(deform(shape, 2, 0.03));
+			ctx.fillStyle = hsla(c, per, gauss() * 0.8);
+			ctx.fill();
+		}
 		ctx.restore();
 	}
 	/** Translucent wash with a darker, pooled rim. */
 	function wash(poly: Pt[], c: Hsl, o: { layers?: number; alpha?: number; v?: number; edge?: number } = {}) {
 		const layers = o.layers ?? 14;
 		const alpha = o.alpha ?? 0.06;
-		const v = o.v ?? 0.04;
+		const v = o.v ?? 0.06;
 		const edge = o.edge ?? 0.6;
 		const shape = deform(poly, 2, v);
 		ctx.save();
@@ -95,16 +103,32 @@ function kit(canvas: HTMLCanvasElement, seed: number) {
 		}
 		ctx.restore();
 	}
-	/** A sketchy ink line: a couple of slightly offset passes. */
+	/** A soft brush stroke: several wobbly, translucent, slightly blurred passes. */
 	function line(pts: Pt[], c: Hsl, a: number, w: number, close = false) {
 		ctx.save();
 		ctx.globalCompositeOperation = 'multiply';
-		for (let p = 0; p < 2; p++) {
-			const j = pts.map(([x, y]) => [x + gauss() * 0.35, y + gauss() * 0.35] as Pt);
+		ctx.shadowColor = hsla(c, a * 0.5);
+		ctx.shadowBlur = 1.6 * k;
+		const passes = 4;
+		for (let p = 0; p < passes; p++) {
+			const j = pts.map(([x, y]) => [x + gauss() * 0.6, y + gauss() * 0.6] as Pt);
 			path(j, close);
-			ctx.strokeStyle = hsla(c, a * (p ? 0.6 : 1));
-			ctx.lineWidth = w * (p ? 0.7 : 1);
+			ctx.strokeStyle = hsla(c, (a * 0.45) / (1 + p * 0.3));
+			ctx.lineWidth = w * (1.3 - p * 0.18);
 			ctx.stroke();
+		}
+		ctx.restore();
+	}
+	/** Paper tooth: tiny specks knocked out of the paint, as on the snowflakes. */
+	function grain() {
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.globalCompositeOperation = 'destination-out';
+		const W = canvas.width;
+		const n = (W * W) / 6;
+		for (let i = 0; i < n; i++) {
+			ctx.fillStyle = `rgba(0,0,0,${rnd() * 0.22})`;
+			ctx.fillRect(rnd() * W, rnd() * W, 1, 1);
 		}
 		ctx.restore();
 	}
@@ -113,15 +137,15 @@ function kit(canvas: HTMLCanvasElement, seed: number) {
 			const a = (i / n) * Math.PI * 2;
 			return [x + Math.cos(a) * rx, y + Math.sin(a) * ry];
 		});
-	return { ctx, R, gauss, hsla, deform, path, base, wash, line, ellipse };
+	return { ctx, R, gauss, hsla, deform, path, base, wash, line, ellipse, grain };
 }
 
 /* ------------------------------------------------------------------ */
 
 export function paintEnvelope(canvas: HTMLCanvasElement) {
-	const { ctx, base, wash, line, ellipse, deform, path, hsla, R } = kit(canvas, 1225);
+	const { ctx, base, wash, line, ellipse, deform, path, hsla, R, grain } = kit(canvas, 1225);
 	const paper: Hsl = [40, 38, 95];
-	const pencil: Hsl = [28, 18, 38];
+	const pencil: Hsl = [28, 16, 52];
 	const wax: Hsl = [356, 72, 38];
 
 	// Soft shadow on the ground.
@@ -144,7 +168,7 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 		[L, B]
 	];
 	base(body, paper);
-	wash(body, [38, 30, 90], { layers: 10, alpha: 0.05, edge: 0.9 });
+	wash(body, [36, 28, 86], { layers: 16, alpha: 0.05, edge: 1.6 });
 	// Bottom pocket: folds from the lower corners, a touch of shadow.
 	wash(
 		[
@@ -174,7 +198,7 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 		[220, 15, 90],
 		{ layers: 6, alpha: 0.035, edge: 0.2 }
 	);
-	line([[L, B], [100, 103], [Rt, B]], pencil, 0.4, 1.1);
+	line([[L, B], [100, 103], [Rt, B]], pencil, 0.35, 1.4);
 	// Top flap, closed, casting a soft shadow below its edge.
 	const flap: Pt[] = [[L, T], [Rt, T], tip];
 	wash(
@@ -183,9 +207,8 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 		{ layers: 6, alpha: 0.04, edge: 0 }
 	);
 	base(flap, [41, 40, 96]);
-	wash(flap, [38, 32, 89], { layers: 10, alpha: 0.05, edge: 0.8 });
-	line([[L, T], tip, [Rt, T]], pencil, 0.6, 1.3);
-	line([...body, body[0]], pencil, 0.65, 1.5);
+	wash(flap, [36, 30, 86], { layers: 14, alpha: 0.05, edge: 1.5 });
+	line([[L, T], tip, [Rt, T]], pencil, 0.45, 1.5);
 
 	// Red wax seal: an irregular blob with a pressed ring and a little star.
 	const [sx, sy] = [tip[0], tip[1] - 2];
@@ -204,9 +227,11 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 	wash(ellipse(sx + 0.6, sy + 0.8, 10.5, 10.5, 24), [356, 70, 30], { layers: 5, alpha: 0.1, v: 0.01, edge: 1.2 });
 	ctx.save();
 	ctx.globalCompositeOperation = 'multiply';
+	ctx.shadowColor = hsla([356, 70, 24], 0.4);
+	ctx.shadowBlur = 1.5 * (canvas.width / DESIGN);
 	path(ellipse(sx, sy, 10.5, 10.5, 32));
-	ctx.strokeStyle = hsla([356, 70, 24], 0.55);
-	ctx.lineWidth = 1.2;
+	ctx.strokeStyle = hsla([356, 70, 24], 0.35);
+	ctx.lineWidth = 1.4;
 	ctx.stroke();
 	// Star stamped into the wax.
 	const star: Pt[] = Array.from({ length: 10 }, (_, i) => {
@@ -215,26 +240,27 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 		return [sx + Math.cos(a) * r, sy + Math.sin(a) * r];
 	});
 	path(star);
-	ctx.fillStyle = hsla([356, 72, 26], 0.55);
+	ctx.fillStyle = hsla([356, 72, 26], 0.4);
 	ctx.fill();
 	ctx.restore();
 	// Shine on the wax.
 	ctx.save();
 	path(deform(ellipse(sx - 6, sy - 7, 4.5, 2.4, 10), 1, 0.08));
-	ctx.fillStyle = 'rgba(255, 225, 225, 0.55)';
+	ctx.fillStyle = 'rgba(255, 225, 225, 0.45)';
 	ctx.fill();
 	ctx.restore();
 
 	ctx.restore();
+	grain();
 }
 
 /* ------------------------------------------------------------------ */
 
 export function paintScroll(canvas: HTMLCanvasElement) {
-	const { ctx, base, wash, line, ellipse, hsla, R, gauss, path } = kit(canvas, 2026);
+	const { ctx, base, wash, line, ellipse, hsla, R, gauss, path, grain } = kit(canvas, 2026);
 	const paper: Hsl = [210, 20, 98];
 	const shade: Hsl = [220, 18, 80];
-	const pencil: Hsl = [220, 12, 30];
+	const pencil: Hsl = [220, 12, 42];
 
 	// Soft shadow on the ground.
 	wash(ellipse(96, 176, 70, 9), [230, 12, 72], { layers: 12, alpha: 0.05, v: 0.1, edge: 0 });
@@ -257,7 +283,7 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		[50, 84]
 	];
 	base(sheet, paper);
-	wash(sheet, shade, { layers: 8, alpha: 0.035, edge: 1 });
+	wash(sheet, shade, { layers: 14, alpha: 0.035, edge: 2 });
 	// A cool shadow down the left where the sheet curves.
 	wash(
 		[
@@ -269,7 +295,6 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		shade,
 		{ layers: 8, alpha: 0.04, edge: 0 }
 	);
-	line([...sheet, sheet[0]], pencil, 0.6, 1.4);
 
 	// Top roll: a cylinder with a spiral end on the left.
 	const top: Pt[] = [
@@ -288,11 +313,11 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 			[46, 58]
 		],
 		shade,
-		{ layers: 10, alpha: 0.06, edge: 0.6 }
+		{ layers: 12, alpha: 0.06, edge: 1 }
 	);
-	line([...top, top[0]], pencil, 0.65, 1.4);
+	wash(top, shade, { layers: 8, alpha: 0.025, edge: 2 });
 	base(ellipse(44, 48, 9, 10.5, 18), paper);
-	wash(ellipse(44, 48, 9, 10.5, 18), shade, { layers: 6, alpha: 0.05, edge: 0.8 });
+	wash(ellipse(44, 48, 9, 10.5, 18), shade, { layers: 8, alpha: 0.05, edge: 1.6 });
 	ctx.save();
 	ctx.globalCompositeOperation = 'multiply';
 	ctx.beginPath();
@@ -303,8 +328,10 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		if (t === 0) ctx.moveTo(x, y);
 		else ctx.lineTo(x, y);
 	}
-	ctx.strokeStyle = hsla(pencil, 0.6);
-	ctx.lineWidth = 1.2;
+	ctx.shadowColor = hsla(pencil, 0.3);
+	ctx.shadowBlur = 1.6 * (canvas.width / DESIGN);
+	ctx.strokeStyle = hsla(pencil, 0.35);
+	ctx.lineWidth = 1.5;
 	ctx.stroke();
 	ctx.restore();
 
@@ -325,10 +352,11 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 			[56, 174]
 		],
 		shade,
-		{ layers: 10, alpha: 0.06, edge: 0.6 }
+		{ layers: 12, alpha: 0.06, edge: 1 }
 	);
-	line([...bottom, bottom[0]], pencil, 0.65, 1.4);
+	wash(bottom, shade, { layers: 8, alpha: 0.025, edge: 2 });
 	base(ellipse(152, 162, 8, 9.5, 18), paper);
+	wash(ellipse(152, 162, 8, 9.5, 18), shade, { layers: 8, alpha: 0.05, edge: 1.6 });
 	ctx.save();
 	ctx.globalCompositeOperation = 'multiply';
 	ctx.beginPath();
@@ -339,8 +367,10 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		if (t === 0) ctx.moveTo(x, y);
 		else ctx.lineTo(x, y);
 	}
-	ctx.strokeStyle = hsla(pencil, 0.6);
-	ctx.lineWidth = 1.2;
+	ctx.shadowColor = hsla(pencil, 0.3);
+	ctx.shadowBlur = 1.6 * (canvas.width / DESIGN);
+	ctx.strokeStyle = hsla(pencil, 0.35);
+	ctx.lineWidth = 1.5;
 	ctx.stroke();
 	ctx.restore();
 
@@ -350,7 +380,7 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 	rows.forEach((y, i) => {
 		const pts: Pt[] = [];
 		for (let x = 66; x <= ends[i]; x += 4) pts.push([x, y + Math.sin(x * 0.4 + i) * 0.6 + gauss() * 0.25]);
-		line(pts, pencil, 0.55, 1.5);
+		line(pts, pencil, 0.5, 1.6);
 	});
 
 	ctx.restore();
@@ -386,8 +416,8 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		[230, 12, 70],
 		{ layers: 6, alpha: 0.04, edge: 0 }
 	);
-	base(vane, ink, 0.9);
-	wash(vane, ink, { layers: 12, alpha: 0.1, v: 0.02, edge: 1 });
+	base(vane, ink, 0.85);
+	wash(vane, ink, { layers: 14, alpha: 0.08, v: 0.04, edge: 1.2 });
 	// Barbs: fine strokes sweeping toward the tip, with a few lighter ones for sheen.
 	ctx.save();
 	for (let i = 0; i < 70; i++) {
@@ -400,7 +430,7 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		ctx.moveTo(bx, by);
 		ctx.quadraticCurveTo(bx + (ex - bx) * 0.5 + nx * w * 0.2, by + (ey - by) * 0.5 + ny * w * 0.2, ex, ey);
 		const light = i % 7 === 0;
-		ctx.strokeStyle = light ? 'rgba(170, 178, 195, 0.45)' : hsla([232, 12, 6], 0.35);
+		ctx.strokeStyle = light ? 'rgba(170, 178, 195, 0.3)' : hsla([232, 12, 6], 0.22);
 		ctx.lineWidth = light ? 0.9 : R(0.5, 0.9);
 		ctx.stroke();
 	}
@@ -414,8 +444,8 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		ctx.beginPath();
 		ctx.moveTo(...at(t - 0.01, w * 0.45));
 		ctx.lineTo(...at(t + 0.04, w * 1.05));
-		ctx.strokeStyle = 'rgba(245, 247, 250, 0.9)';
-		ctx.lineWidth = 1.1;
+		ctx.strokeStyle = 'rgba(245, 247, 250, 0.6)';
+		ctx.lineWidth = 1.3;
 		ctx.stroke();
 	}
 	ctx.restore();
@@ -428,9 +458,12 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 	ctx.beginPath();
 	ctx.moveTo(...at(0.05, 0));
 	ctx.quadraticCurveTo(...at(0.5, 1.2), ...at(1, 0));
+	ctx.shadowColor = 'rgba(200, 205, 215, 0.6)';
+	ctx.shadowBlur = 1.2 * (canvas.width / DESIGN);
 	ctx.strokeStyle = g;
-	ctx.lineWidth = 1.8;
+	ctx.lineWidth = 1.7;
 	ctx.stroke();
+	ctx.shadowBlur = 0;
 	// Nib.
 	path([at(0, 0), at(0.07, 2.2), at(0.07, -2.2)]);
 	ctx.fillStyle = hsla([232, 14, 10], 0.95);
@@ -438,4 +471,5 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 	ctx.restore();
 	// A drop of ink at the nib.
 	wash(ellipse(nib[0] - 1, nib[1] + 2, 2.6, 1.6, 10), ink, { layers: 4, alpha: 0.3, v: 0.05, edge: 1 });
+	grain();
 }
