@@ -8,16 +8,7 @@
 	 * the flap lifts and a card slides out with your giftee's name and wishlist. Left side on desktop, centred on phones. Click during
 	 * the animation to skip it; close with the X, a click outside, or Esc.
 	 */
-	let {
-		open = $bindable(false),
-		seed = 1,
-		preview = false
-	}: {
-		open?: boolean;
-		seed?: number;
-		/** Organizer's test run before the draw: sample card, nothing fetched. */
-		preview?: boolean;
-	} = $props();
+	let { open = $bindable(false), seed = 1 }: { open?: boolean; seed?: number } = $props();
 
 	let dialog: HTMLDialogElement;
 	let stage: HTMLDivElement;
@@ -52,10 +43,6 @@
 		addCloseButton(opening.textArea.parentElement!);
 		// Fetch while the seal breaks; the card's text fades in near the end anyway.
 		const area = opening.textArea;
-		if (preview) {
-			fillPreview(area);
-			return;
-		}
 		api.giftee()
 			.then((res) => fill(area, res.giftee))
 			.catch(() => fill(area, undefined));
@@ -168,20 +155,6 @@
 		const list = el('ul', 'ss-list');
 		for (const item of items) list.append(el('li', '', item));
 		area.append(list);
-	}
-
-	/** A clearly-labelled sample card for testing the animation before the draw. */
-	function fillPreview(area: HTMLElement) {
-		const el = (tag: string, cls: string, text: string) => {
-			const n = document.createElement(tag);
-			n.className = cls;
-			n.textContent = text;
-			return n;
-		};
-		const list = el('ul', 'ss-list', '');
-		for (const item of ['Preview only: the draw hasn’t happened', 'Their wishlist will show up here', 'One line per item'])
-			list.append(el('li', '', item));
-		area.replaceChildren(el('div', 'ss-intro', "You're the Secret Santa for"), el('div', 'ss-name', 'Your giftee'), list);
 	}
 
 	/** Slide the card away, then close the dialog. */
