@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api } from '#lib/api.ts';
 	import { session, refreshSession } from '#lib/session.svelte.ts';
+	import WatercolorTree from '#lib/WatercolorTree.svelte';
 
 	let recipient = $state<string | null>(null);
 	let drawing = $state(false);
@@ -30,6 +31,9 @@
 	}
 </script>
 
+<WatercolorTree />
+
+<div class="content">
 {#if session.me?.name}
 	{#if session.me.drawn}
 		{#if recipient}
@@ -43,4 +47,11 @@
 	{/if}
 	{#if error}<p class="error">{error}</p>{/if}
 {/if}
+</div>
 
+<style>
+	.content {
+		position: relative;
+		z-index: 1; /* above the painting */
+	}
+</style>

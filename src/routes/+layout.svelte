@@ -43,6 +43,8 @@
 
 <style>
 	header {
+		position: relative;
+		z-index: 2; /* above page backgrounds */
 		display: flex;
 		justify-content: flex-end;
 		align-items: center;
