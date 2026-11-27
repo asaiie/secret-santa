@@ -66,9 +66,15 @@
 		position: absolute;
 		left: 50%;
 		transform: translateX(-50%);
-		font: inherit;
-		font-size: 14px;
+		/* Same hand as the page title (font loaded by PaintedBackground). */
+		font-family: 'Cedarville Cursive', cursive;
+		font-size: 20px;
+		line-height: 1.2;
 		color: var(--muted);
+		/* A soft paper-white halo keeps it legible where it overlaps the tree (phones). */
+		text-shadow:
+			0 0 3px rgba(255, 255, 255, 0.95),
+			0 0 8px rgba(255, 255, 255, 0.8);
 		white-space: nowrap;
 		transition: color 220ms ease;
 	}
