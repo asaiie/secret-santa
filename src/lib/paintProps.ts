@@ -154,7 +154,7 @@ function brushes(canvas: HTMLCanvasElement, size: { w: number; h: number }, seed
 		ctx.restore();
 	}
 	// Paper tooth, only where paint is.
-	function grain() {
+	function grain(strength = 38) {
 		const s = document.createElement('canvas');
 		s.width = canvas.width;
 		s.height = canvas.height;
@@ -165,7 +165,7 @@ function brushes(canvas: HTMLCanvasElement, size: { w: number; h: number }, seed
 			d[i] = 60;
 			d[i + 1] = 45;
 			d[i + 2] = 30;
-			d[i + 3] = Math.pow(rnd(), 3) * 38;
+			d[i + 3] = Math.pow(rnd(), 3) * strength;
 		}
 		sc.putImageData(id, 0, 0);
 		ctx.save();
@@ -190,13 +190,26 @@ function brushes(canvas: HTMLCanvasElement, size: { w: number; h: number }, seed
 		ctx.restore();
 	}
 
-	return { ctx, rnd, R, gauss, hsla, deform, path, wash, circ, ellipse, rect, dense, rot, stroke, grain, splatter };
+	/**
+	 * Opaque white under the paper, so the glow and the background don't show through
+	 * the translucent washes and tint it. Slightly inset so the painted edge stays soft.
+	 */
+	function underlay(poly: Pt[], alpha = 0.92) {
+		ctx.save();
+		ctx.globalCompositeOperation = 'source-over';
+		path(deform(poly, 2, 0.01));
+		ctx.fillStyle = `rgba(255, 254, 251, ${alpha})`;
+		ctx.fill();
+		ctx.restore();
+	}
+
+	return { ctx, rnd, R, gauss, hsla, deform, path, wash, circ, ellipse, rect, dense, rot, stroke, grain, splatter, underlay };
 }
 
 /* ---------- envelope with a red wax seal ---------- */
 
 export function paintEnvelope(canvas: HTMLCanvasElement) {
-	const { ctx, R, deform, path, wash, circ, ellipse, rect, rot, stroke, grain, splatter } = brushes(
+	const { ctx, R, deform, path, wash, circ, ellipse, rect, rot, stroke, grain, splatter, underlay } = brushes(
 		canvas,
 		ENVELOPE,
 		1225
@@ -233,15 +246,16 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 
 	// Shadow, body, the four flaps.
 	wash(P(rect(x0 + 3, y0 + 5, EW, EH)), [30, 20, 50], { layers: 10, alpha: 0.025, v: 0.03, edge: 0 });
-	wash(P(rect(x0, y0, EW, EH)), [42, 45, 90], { layers: 18, alpha: 0.05, v: 0.02, edge: 0.55 });
+	underlay(P(rect(x0 + 1, y0 + 1, EW - 2, EH - 2)));
+	wash(P(rect(x0, y0, EW, EH)), [42, 20, 97], { layers: 18, alpha: 0.05, v: 0.02, edge: 0.45 });
 	wash(
 		P([
 			[x0, y0 + 2],
 			[cx - 6, cy + 4],
 			[x0, y1 - 2]
 		]),
-		[38, 36, 84],
-		{ layers: 10, alpha: 0.035, v: 0.02, edge: 0.6 }
+		[38, 14, 93],
+		{ layers: 10, alpha: 0.035, v: 0.02, edge: 0.5 }
 	);
 	wash(
 		P([
@@ -249,8 +263,8 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 			[cx + 6, cy + 4],
 			[x1, y1 - 2]
 		]),
-		[38, 36, 82],
-		{ layers: 10, alpha: 0.04, v: 0.02, edge: 0.6 }
+		[38, 14, 92],
+		{ layers: 10, alpha: 0.04, v: 0.02, edge: 0.5 }
 	);
 	wash(
 		P([
@@ -258,8 +272,8 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 			[cx, cy - 6],
 			[x1 - 1, y1]
 		]),
-		[40, 38, 86],
-		{ layers: 12, alpha: 0.04, v: 0.02, edge: 0.6 }
+		[40, 14, 94],
+		{ layers: 12, alpha: 0.04, v: 0.02, edge: 0.5 }
 	);
 	wash(
 		P([
@@ -267,7 +281,7 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 			[x1, y0 + 2],
 			[cx, cy + 22]
 		]),
-		[30, 25, 60],
+		[30, 10, 76],
 		{ layers: 8, alpha: 0.03, v: 0.03, edge: 0 }
 	);
 	wash(
@@ -276,8 +290,8 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 			[x1, y0],
 			[cx, cy + 18]
 		]),
-		[42, 46, 91],
-		{ layers: 14, alpha: 0.05, v: 0.02, edge: 0.6 }
+		[42, 20, 97],
+		{ layers: 14, alpha: 0.05, v: 0.02, edge: 0.5 }
 	);
 	// A whisper of graphite along the folds.
 	stroke(
@@ -400,13 +414,17 @@ export function paintEnvelope(canvas: HTMLCanvasElement) {
 		],
 		10
 	);
-	grain();
+	grain(16);
 }
 
 /* ---------- unfurled scroll with a quill ---------- */
 
 export function paintScroll(canvas: HTMLCanvasElement) {
-	const { ctx, rnd, R, wash, circ, ellipse, rect, dense, stroke, grain, splatter } = brushes(canvas, SCROLL, 2026);
+	const { ctx, rnd, R, wash, circ, ellipse, rect, dense, stroke, grain, splatter, underlay } = brushes(
+		canvas,
+		SCROLL,
+		2026
+	);
 	const sx0 = 28;
 	const sx1 = 108;
 	const sy0 = 34;
@@ -428,16 +446,17 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		[30, 25, 45],
 		{ layers: 12, alpha: 0.035, v: 0.02, edge: 0 }
 	);
-	wash(sheet, [40, 55, 88], { layers: 18, alpha: 0.05, v: 0.015, edge: 0.55 });
+	underlay(sheet.map(([x, y]) => [x + (x < scx ? 1 : -1), y] as Pt));
+	wash(sheet, [40, 20, 97], { layers: 18, alpha: 0.05, v: 0.015, edge: 0.45 });
 	for (let k = 0; k < 7; k++) {
 		const side = rnd() < 0.5;
 		const x = side ? R(sx0 + 2, sx0 + 14) : R(sx1 - 14, sx1 - 2);
 		const y = R(sy0 + 8, sy1 - 8);
-		wash(circ(x, y, R(5, 12), 9), [32, 50, 68], { layers: 6, alpha: 0.022, v: 0.25, edge: 0.6 });
+		wash(circ(x, y, R(5, 12), 9), [32, 22, 86], { layers: 6, alpha: 0.02, v: 0.25, edge: 0.5 });
 	}
 	const tx = R(sx0 + 20, sx1 - 20);
 	const ty = R(sy0 + 40, sy1 - 30); // one faint ring stain
-	wash(circ(tx, ty, R(7, 10), 12), [30, 40, 70], { layers: 6, alpha: 0.02, v: 0.08, edge: 2.2 });
+	wash(circ(tx, ty, R(7, 10), 12), [30, 18, 86], { layers: 6, alpha: 0.02, v: 0.08, edge: 1.6 });
 
 	// Handwriting: illegible sepia script, line by line.
 	const nib: Pt = [94, 131];
@@ -480,8 +499,9 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 			v: 0.02,
 			edge: 0
 		});
-		wash(rect(RX0, ry - RR, RW, RR * 2), [34, 52, 78], { layers: 14, alpha: 0.06, v: 0.015, edge: 0.6 });
-		wash(rect(RX0 + 2, ry + 0.5, RW - 4, RR - 1), [30, 45, 58], { layers: 6, alpha: 0.045, v: 0.02, edge: 0.2 }); // underside shade
+		underlay(rect(RX0 + 0.5, ry - RR + 0.5, RW - 1, RR * 2 - 1));
+		wash(rect(RX0, ry - RR, RW, RR * 2), [36, 18, 93], { layers: 14, alpha: 0.06, v: 0.015, edge: 0.5 });
+		wash(rect(RX0 + 2, ry + 0.5, RW - 4, RR - 1), [32, 14, 82], { layers: 6, alpha: 0.045, v: 0.02, edge: 0.2 }); // underside shade
 		ctx.save();
 		ctx.globalCompositeOperation = 'source-over';
 		ctx.strokeStyle = 'rgba(255,250,236,0.6)';
@@ -494,7 +514,8 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		ctx.restore();
 		// Curled ends with a spiral.
 		for (const ex of [RX0, RX0 + RW]) {
-			wash(ellipse(ex, ry, 3.4, RR, 12), [34, 50, 72], { layers: 7, alpha: 0.08, v: 0.04, edge: 0.8 });
+			underlay(ellipse(ex, ry, 3, RR - 0.5, 12));
+			wash(ellipse(ex, ry, 3.4, RR, 12), [36, 16, 88], { layers: 7, alpha: 0.08, v: 0.04, edge: 0.7 });
 			const sp: Pt[] = [];
 			for (let a = 0; a < Math.PI * 5; a += 0.25) {
 				const k = 1 - a / (Math.PI * 5.4);
@@ -632,5 +653,5 @@ export function paintScroll(canvas: HTMLCanvasElement) {
 		],
 		9
 	);
-	grain();
+	grain(16);
 }
