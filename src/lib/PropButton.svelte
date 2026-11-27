@@ -36,8 +36,11 @@
 	style:height="{prop.h}px"
 	{onclick}
 >
-	<span class="caption" style:bottom="{captionAt}%" aria-hidden="true">{caption}</span>
-	<canvas bind:this={canvas} aria-hidden="true"></canvas>
+	<!-- Caption and painting scale together as one piece. -->
+	<span class="art">
+		<span class="caption" style:bottom="{captionAt}%" aria-hidden="true">{caption}</span>
+		<canvas bind:this={canvas} aria-hidden="true"></canvas>
+	</span>
 </button>
 
 <style>
@@ -52,6 +55,13 @@
 		-webkit-tap-highlight-color: transparent;
 		animation: appear 450ms ease-out both;
 	}
+	.art {
+		position: relative;
+		display: block;
+		width: 100%;
+		height: 100%;
+		transition: transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1.2);
+	}
 	.caption {
 		position: absolute;
 		left: 50%;
@@ -60,6 +70,7 @@
 		font-size: 14px;
 		color: var(--muted);
 		white-space: nowrap;
+		transition: color 220ms ease;
 	}
 	canvas {
 		display: block;
@@ -67,17 +78,22 @@
 		height: 100%;
 		/* The glow follows the painted shape, not the square. */
 		filter: drop-shadow(0 0 5px rgba(255, 199, 66, 0.75)) drop-shadow(0 0 16px rgba(255, 183, 40, 0.45));
-		transition:
-			transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1.2),
-			filter 220ms ease;
+		transition: filter 220ms ease;
+	}
+	.prop:hover .art,
+	.prop:focus-visible .art {
+		transform: scale(1.14);
+	}
+	.prop:hover .caption,
+	.prop:focus-visible .caption {
+		color: var(--ink);
 	}
 	.prop:hover canvas,
 	.prop:focus-visible canvas {
-		transform: scale(1.14);
 		filter: drop-shadow(0 0 8px rgba(255, 206, 80, 0.98)) drop-shadow(0 0 28px rgba(255, 186, 45, 0.75))
 			drop-shadow(0 0 48px rgba(255, 176, 30, 0.35));
 	}
-	.prop:active canvas {
+	.prop:active .art {
 		transform: scale(1.06);
 	}
 	.prop:focus-visible {
@@ -92,11 +108,12 @@
 		.prop {
 			animation: none;
 		}
-		canvas {
-			transition: filter 220ms ease;
+		.art {
+			transition: none;
 		}
-		.prop:hover canvas,
-		.prop:focus-visible canvas {
+		.prop:hover .art,
+		.prop:focus-visible .art,
+		.prop:active .art {
 			transform: none;
 		}
 	}
