@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { paintCrystal, paintDot, type Sprite } from './watercolor.ts';
+	import { paintCrystal, type CrystalStyle, type Sprite } from './watercolor.ts';
 
 	/** Ambient watercolor snow drifting down behind the page. Purely decorative. */
 	let { density = 1 }: { density?: number } = $props();
@@ -27,8 +27,10 @@
 		const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 		// Paint a small set of unique flakes once; every falling flake reuses one.
-		const dots = Array.from({ length: 10 }, paintDot);
-		const crystals = Array.from({ length: 8 }, paintCrystal);
+		// Small, distant flakes use the bold 'star' design so they still read as snowflakes.
+		const paint = (style: CrystalStyle, n: number) => Array.from({ length: n }, () => paintCrystal(style));
+		const far = paint('star', 6);
+		const near = [...paint('branched', 4), ...paint('fern', 3), ...paint('plate', 3), ...paint('star', 2)];
 		const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
 
 		let width = 0;
@@ -39,8 +41,7 @@
 
 		const makeFlake = (anywhere: boolean): Flake => {
 			const depth = Math.random() ** 1.5; // more far flakes than near ones
-			const crystal = depth > 0.45 && Math.random() < 0.4;
-			const r = crystal ? 8 + depth * 10 : 2.5 + depth * 4.5;
+			const r = 5 + depth * 11;
 			return {
 				x: Math.random() * width,
 				y: anywhere ? Math.random() * height : -r * 3 - Math.random() * 40,
@@ -50,9 +51,9 @@
 				swayPhase: Math.random() * Math.PI * 2,
 				swaySpeed: 0.3 + Math.random() * 0.5,
 				swayAmp: 8 + depth * 22,
-				sprite: crystal ? pick(crystals) : pick(dots),
+				sprite: depth < 0.35 ? pick(far) : pick(near),
 				angle: Math.random() * Math.PI * 2,
-				spin: (Math.random() - 0.5) * (crystal ? 0.5 : 0.2)
+				spin: (Math.random() - 0.5) * 0.5
 			};
 		};
 
@@ -64,8 +65,8 @@
 			canvas.height = height * dpr;
 			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 			ctx.imageSmoothingQuality = 'high';
-			// About one flake per 16k px², capped so big screens stay calm.
-			const target = Math.min(120, Math.round(((width * height) / 16000) * density));
+			// About one flake per 20k px², capped so big screens stay calm.
+			const target = Math.min(90, Math.round(((width * height) / 20000) * density));
 			while (flakes.length < target) flakes.push(makeFlake(true));
 			flakes.length = target;
 		};
@@ -81,7 +82,7 @@
 				const x = f.x + Math.sin(t * f.swaySpeed + f.swayPhase) * f.swayAmp;
 				const scale = f.r / f.sprite.radius;
 				const s = f.sprite.size * scale;
-				ctx.globalAlpha = 0.55 + f.depth * 0.45;
+				ctx.globalAlpha = 0.35 + f.depth * 0.35;
 				ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 				ctx.translate(x, f.y);
 				ctx.rotate(f.angle);

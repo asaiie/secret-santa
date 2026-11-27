@@ -76,7 +76,7 @@ function wash(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, 
 	ctx.lineJoin = 'round';
 	for (let i = 0; i < 2; i++) {
 		trace(ctx, deform(base, 2, 0.05));
-		ctx.strokeStyle = hsla(c, 0.12 * strength, -14);
+		ctx.strokeStyle = hsla(c, 0.09 * strength, -10);
 		ctx.lineWidth = Math.max(0.8, r * 0.07);
 		ctx.stroke();
 	}
@@ -109,7 +109,7 @@ function stroke(
 			right.push([t * len, off + w]);
 		}
 		trace(ctx, deform([...left, ...right.reverse()], 1, 0.03));
-		ctx.fillStyle = hsla(c, p === passes - 1 ? 0.2 : 0.11, p === passes - 1 ? -10 : 0);
+		ctx.fillStyle = hsla(c, p === passes - 1 ? 0.14 : 0.08, p === passes - 1 ? -6 : 0);
 		ctx.fill();
 	}
 	ctx.restore();
@@ -129,10 +129,10 @@ function grain(ctx: CanvasRenderingContext2D, size: number) {
 }
 
 function palette(): Hsl {
-	// Mostly cool blues, the odd periwinkle.
+	// Pale cool blues, the odd periwinkle.
 	return Math.random() < 0.2
-		? { h: rand(235, 255), s: rand(28, 42), l: rand(58, 66) }
-		: { h: rand(198, 225), s: rand(38, 58), l: rand(52, 64) };
+		? { h: rand(232, 252), s: rand(22, 34), l: rand(66, 74) }
+		: { h: rand(198, 222), s: rand(30, 46), l: rand(62, 72) };
 }
 
 function makeCanvas(size: number) {
@@ -141,51 +141,66 @@ function makeCanvas(size: number) {
 	return { canvas, ctx: canvas.getContext('2d')! };
 }
 
-/** A round dab of snow. */
-export function paintDot(): Sprite {
-	const radius = 22;
-	const size = Math.ceil(radius * 2.8);
-	const { canvas, ctx } = makeCanvas(size);
-	const c = palette();
-	wash(ctx, size / 2, size / 2, radius, c, rand(1, 1.5));
-	// Occasionally a second, offset bloom of wetter pigment.
-	if (Math.random() < 0.5) {
-		wash(ctx, size / 2 + gauss() * 4, size / 2 + gauss() * 4, radius * rand(0.4, 0.6), c, 0.8);
-	}
-	grain(ctx, size);
-	return { canvas, size, radius };
-}
+export type CrystalStyle = 'star' | 'branched' | 'fern' | 'plate';
+
+/** Side branches per arm as [position along arm, branch length], both relative. */
+const BRANCHES: Record<CrystalStyle, [number, number][]> = {
+	star: [[0.78, 0.2]], // bold plain arms with a fork at the tip; reads well when tiny
+	branched: [
+		[0.42, 0.34],
+		[0.68, 0.22]
+	],
+	fern: [
+		[0.35, 0.22],
+		[0.55, 0.2],
+		[0.75, 0.15]
+	],
+	plate: [[0.72, 0.22]] // short arms around a hexagonal wash
+};
 
 /** A six-armed crystal painted with brush strokes. */
-export function paintCrystal(): Sprite {
+export function paintCrystal(style: CrystalStyle): Sprite {
 	const radius = 46;
 	const size = Math.ceil(radius * 2.5);
 	const { canvas, ctx } = makeCanvas(size);
 	const c = palette();
 	const mid = size / 2;
+	const tilt = Math.random() * Math.PI;
 
 	// Faint halo wash behind the arms.
-	wash(ctx, mid, mid, radius * rand(0.45, 0.6), c, 0.35);
+	wash(ctx, mid, mid, radius * rand(0.4, 0.55), c, 0.22);
 
-	const tilt = Math.random() * Math.PI;
-	const w = radius * rand(0.13, 0.18);
+	if (style === 'plate') {
+		const hex: Pt[] = Array.from({ length: 6 }, (_, i) => {
+			const a = tilt + (i * Math.PI) / 3;
+			return [mid + Math.cos(a) * radius * 0.42, mid + Math.sin(a) * radius * 0.42];
+		});
+		const base = deform(hex, 2, 0.04);
+		for (let i = 0; i < 16; i++) {
+			trace(ctx, deform(base, 2, 0.05));
+			ctx.fillStyle = hsla(c, 0.04);
+			ctx.fill();
+		}
+		trace(ctx, base);
+		ctx.strokeStyle = hsla(c, 0.18, -8);
+		ctx.lineWidth = 1.4;
+		ctx.stroke();
+	}
+
+	const w = radius * (style === 'star' ? rand(0.2, 0.24) : rand(0.13, 0.17));
 	for (let i = 0; i < 6; i++) {
-		const a = tilt + (i * Math.PI) / 3 + gauss() * 0.04;
-		const len = radius * rand(0.82, 1);
+		const a = tilt + (i * Math.PI) / 3 + gauss() * 0.03;
+		const len = radius * (style === 'plate' ? rand(0.8, 0.92) : rand(0.85, 1));
 		stroke(ctx, mid, mid, a, len, w, c);
-		// Two pairs of side branches.
-		for (const [t, bl] of [
-			[0.42, 0.34],
-			[0.68, 0.22]
-		]) {
+		for (const [t, bl] of BRANCHES[style]) {
 			const bx = mid + Math.cos(a) * len * t;
 			const by = mid + Math.sin(a) * len * t;
 			for (const side of [-1, 1]) {
-				stroke(ctx, bx, by, a + side * rand(0.85, 1.05), radius * bl * rand(0.8, 1.1), w * 0.6, c, 4);
+				stroke(ctx, bx, by, a + side * rand(0.9, 1.05), radius * bl * rand(0.85, 1.1), w * 0.6, c, 4);
 			}
 		}
 	}
-	wash(ctx, mid, mid, radius * 0.16, c, 1.4);
+	wash(ctx, mid, mid, radius * 0.12, c, 0.9);
 	grain(ctx, size);
 	return { canvas, size, radius };
 }
