@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '@fontsource/cedarville-cursive/400.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { computeLayout } from './layout.ts';
@@ -117,9 +118,9 @@
 		justify-content: center;
 		margin: 0;
 		padding: 0 16px;
-		font-size: clamp(18px, 2.2vw, 26px);
-		font-weight: 500;
-		letter-spacing: -0.01em;
+		font-family: 'Cedarville Cursive', cursive;
+		font-size: clamp(24px, 2.9vw, 36px);
+		font-weight: 400;
 		white-space: nowrap;
 		pointer-events: none;
 		visibility: hidden;
