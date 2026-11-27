@@ -8,7 +8,7 @@
  * scale they're the size of the gifts under it.
  */
 
-type Pt = [number, number];
+export type Pt = [number, number];
 type Hsl = [number, number, number];
 type WashOpts = {
 	layers?: number;
@@ -40,11 +40,11 @@ function mulberry(seed: number) {
 }
 
 /** Sizes the canvas and returns the shared watercolor brushes bound to it. */
-function brushes(canvas: HTMLCanvasElement, size: { w: number; h: number }, seed: number) {
-	canvas.width = size.w * RES;
-	canvas.height = size.h * RES;
+export function brushes(canvas: HTMLCanvasElement, size: { w: number; h: number }, seed: number, res = RES) {
+	canvas.width = Math.round(size.w * res);
+	canvas.height = Math.round(size.h * res);
 	const ctx = canvas.getContext('2d')!;
-	ctx.setTransform(RES, 0, 0, RES, 0, 0);
+	ctx.setTransform(res, 0, 0, res, 0, 0);
 	ctx.clearRect(0, 0, size.w, size.h);
 	const rnd = mulberry(seed);
 	const tasks: (() => void)[] = [];

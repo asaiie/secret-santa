@@ -1,37 +1,85 @@
 <script lang="ts">
 	import { api } from './api.ts';
 	import { WISHLIST_MAX } from './names.ts';
+	import { ROLL_R, paintRoll, paintSheet } from './paintParchment.ts';
 
 	/**
-	 * Your wishlist, in a panel: right side on desktop, over the tree on phones.
-	 * Saves a moment after you stop typing and again when it closes; the status line
-	 * only says "Saved" once the server has stored it.
+	 * Your wishlist, written on a painted scroll that unrolls when it opens: on the
+	 * right on desktop, over the tree on phones. Saves a moment after you stop typing
+	 * and again when it closes; the note only says "saved" once the server has it.
 	 */
 	let { open = $bindable(false) }: { open?: boolean } = $props();
 
 	type Status = 'loading' | 'saved' | 'unsaved' | 'saving' | 'error';
 
 	let dialog: HTMLDialogElement;
+	let panel: HTMLDivElement;
+	let sheetCanvas: HTMLCanvasElement;
+	let topRoll: HTMLCanvasElement;
+	let bottomRoll: HTMLCanvasElement;
 	let textarea = $state<HTMLTextAreaElement>();
+	let unrolled = $state(false);
 	let text = $state('');
 	let status = $state<Status>('loading');
-	let savedText = '';
 	let loaded = $state(false);
+	let savedText = '';
 	let timer = 0;
 	let inflight = false;
 	let again = false;
+	let closing = 0;
 
 	const DEBOUNCE = 700;
 	const RETRY = 3000;
+	const UNROLL_MS = 650;
+	const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 	$effect(() => {
-		if (open && !dialog.open) {
-			dialog.showModal();
-			load();
-		} else if (!open && dialog.open) {
-			dialog.close();
-		}
+		if (open && !dialog.open) show();
+		else if (!open && dialog.open && !closing) requestClose();
 	});
+
+	function show() {
+		clearTimeout(closing);
+		closing = 0;
+		unrolled = false;
+		dialog.showModal();
+		// Paint a fresh variation at the panel's real size, then unroll it.
+		const w = panel.clientWidth;
+		const h = panel.clientHeight;
+		const seed = Math.floor(Math.random() * 2 ** 31);
+		paintSheet(sheetCanvas, w, h, seed);
+		paintRoll(topRoll, w, seed + 1);
+		paintRoll(bottomRoll, w, seed + 2);
+		panel.style.setProperty('--travel', `${h - ROLL_R * 2}px`);
+		requestAnimationFrame(() => requestAnimationFrame(() => (unrolled = true)));
+		load();
+	}
+
+	/** Roll the scroll back up, then close the dialog. */
+	function requestClose() {
+		if (!dialog.open || closing) return;
+		unrolled = false;
+		if (reduceMotion()) dialog.close();
+		else closing = window.setTimeout(() => dialog.close(), UNROLL_MS * 0.8);
+	}
+
+	function onClose() {
+		closing = 0;
+		open = false;
+		// Flush anything typed in the last moment.
+		if (loaded && text !== savedText) save();
+	}
+
+	function onCancel(e: Event) {
+		// Esc: roll up first instead of vanishing.
+		e.preventDefault();
+		requestClose();
+	}
+
+	// A click that lands on the <dialog> itself (not the scroll inside it) is the backdrop.
+	function onBackdrop(e: MouseEvent) {
+		if (e.target === dialog) requestClose();
+	}
 
 	async function load() {
 		// Don't clobber edits that haven't reached the server yet.
@@ -43,7 +91,7 @@
 			text = savedText = res.text;
 			loaded = true;
 			status = 'saved';
-			queueMicrotask(() => textarea?.focus());
+			setTimeout(() => textarea?.focus({ preventScroll: true }), reduceMotion() ? 0 : UNROLL_MS);
 		} catch {
 			status = 'error';
 		}
@@ -86,157 +134,235 @@
 		}
 	}
 
-	function onClose() {
-		open = false;
-		// Flush anything typed in the last moment.
-		if (loaded && text !== savedText) save();
-	}
-
-	// A click that lands on the <dialog> itself (not the panel inside it) is the backdrop.
-	function onBackdrop(e: MouseEvent) {
-		if (e.target === dialog) dialog.close();
-	}
-
 	const statusText: Record<Status, string> = {
-		loading: 'Loading…',
-		saved: 'Saved',
-		unsaved: 'Saving…',
-		saving: 'Saving…',
-		error: "Couldn't save. Retrying…"
+		loading: 'unrolling…',
+		saved: 'saved',
+		unsaved: 'saving…',
+		saving: 'saving…',
+		error: "couldn't save, retrying…"
 	};
 </script>
 
-<dialog bind:this={dialog} onclose={onClose} onclick={onBackdrop} aria-labelledby="wishlist-title">
-	<div class="panel">
-		<header>
-			<h2 id="wishlist-title">Wishlist</h2>
-			<button class="close btn-ghost" onclick={() => dialog.close()} aria-label="Close">
-				<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-					<path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-				</svg>
-			</button>
-		</header>
-		<textarea
-			bind:this={textarea}
-			bind:value={text}
-			oninput={onInput}
-			disabled={!loaded}
-			maxlength={WISHLIST_MAX}
-			placeholder="What would you love to get? Ideas, sizes, links…"
-			aria-label="Your wishlist"
-		></textarea>
-		<p class="status" class:error={status === 'error'} role="status" aria-live="polite">
-			{#if status === 'saved'}
-				<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-					<path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-				</svg>
-			{/if}
-			{statusText[status]}
-		</p>
+<dialog
+	bind:this={dialog}
+	onclose={onClose}
+	oncancel={onCancel}
+	onclick={onBackdrop}
+	aria-labelledby="wishlist-title"
+>
+	<div class="scroll" class:unrolled bind:this={panel}>
+		<canvas class="sheet" bind:this={sheetCanvas} aria-hidden="true"></canvas>
+		<canvas class="roll top" bind:this={topRoll} aria-hidden="true"></canvas>
+		<canvas class="roll bottom" bind:this={bottomRoll} aria-hidden="true"></canvas>
+
+		<div class="writing">
+			<header>
+				<h2 id="wishlist-title">Wishlist</h2>
+				<button class="close" onclick={requestClose} aria-label="Close">
+					<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true">
+						<path d="M5.2 5.6C8.8 9 13 13.3 16.9 16.8" />
+						<path d="M16.6 5.1C13.2 8.8 9.3 12.7 5.4 17.2" />
+					</svg>
+				</button>
+			</header>
+			<textarea
+				bind:this={textarea}
+				bind:value={text}
+				oninput={onInput}
+				disabled={!loaded}
+				maxlength={WISHLIST_MAX}
+				placeholder="What would you love to get? Ideas, sizes, links…"
+				aria-label="Your wishlist"
+			></textarea>
+			<p class="status" class:error={status === 'error'} role="status" aria-live="polite">
+				{#if status === 'saved'}
+					<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+						<path d="M3 8.7c1.1 1 2 2 2.9 3.1C8 8.6 10.3 6 13.2 3.6" />
+					</svg>
+				{/if}
+				{statusText[status]}
+			</p>
+		</div>
 	</div>
 </dialog>
 
 <style>
 	dialog {
-		/* Desktop: a panel on the right, vertically centred. */
+		/* The dialog is just a positioned, invisible frame; the scroll is the panel. */
+		--w: min(400px, calc(100vw - 32px));
+		--h: min(600px, calc(100dvh - 64px));
+		--ink: #3a2f26;
 		margin: auto 32px auto auto;
-		width: min(380px, calc(100vw - 32px));
-		max-height: calc(100dvh - 48px);
+		width: var(--w);
+		height: var(--h);
+		max-width: none;
+		max-height: none;
 		padding: 0;
-		border: 1px solid var(--line);
-		border-radius: var(--radius);
-		background: var(--bg);
-		color: var(--ink);
-		box-shadow:
-			0 1px 2px rgba(0, 0, 0, 0.08),
-			0 18px 40px -16px rgba(30, 25, 40, 0.35);
+		border: 0;
+		background: transparent;
+		overflow: visible;
 	}
-	dialog[open] {
-		animation: slide-in 220ms cubic-bezier(0.2, 0.8, 0.3, 1);
-	}
+	/* A soft white mist over the painting instead of a grey dim. */
 	dialog::backdrop {
-		background: rgba(32, 33, 31, 0.18);
+		background: rgba(255, 255, 255, 0.42);
+		-webkit-backdrop-filter: blur(2px);
+		backdrop-filter: blur(2px);
 	}
-	.panel {
+	.scroll {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		--ease: cubic-bezier(0.3, 0.7, 0.25, 1);
+	}
+	canvas {
+		position: absolute;
+		left: 0;
+		display: block;
+		width: 100%;
+		pointer-events: none;
+	}
+	.sheet {
+		top: 0;
+		height: 100%;
+		/* Hidden behind the top roll until it unrolls. */
+		clip-path: inset(0 0 calc(100% - 24px) 0);
+		transition: clip-path 650ms var(--ease);
+	}
+	.roll {
+		height: 34px; /* ROLL_R * 2 + 10 */
+		z-index: 1;
+	}
+	.roll.top {
+		top: -2px;
+	}
+	.roll.bottom {
+		top: -2px;
+		transform: translateY(0);
+		transition: transform 650ms var(--ease);
+	}
+	.unrolled .sheet {
+		clip-path: inset(0 0 0 0);
+	}
+	.unrolled .roll.bottom {
+		transform: translateY(var(--travel));
+	}
+
+	.writing {
+		position: absolute;
+		inset: 30px 30px 26px;
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
-		padding: 16px 18px 14px;
+		gap: 4px;
+		opacity: 0;
+		transition: opacity 200ms ease;
+	}
+	.unrolled .writing {
+		opacity: 1;
+		transition: opacity 350ms ease 380ms;
 	}
 	header {
+		position: relative;
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
+		justify-content: center;
 	}
 	h2 {
-		margin: 0;
-		font-size: 17px;
-		font-weight: 700;
+		margin: 2px 0 0;
+		font-family: 'Cedarville Cursive', cursive;
+		font-size: 32px;
+		font-weight: 400;
+		line-height: 1.2;
+		color: var(--ink);
 	}
 	.close {
-		margin: -6px -8px -6px 0;
-		width: 36px;
+		position: absolute;
+		right: -6px;
+		top: 4px;
+		width: 34px;
+		height: 34px;
+		display: grid;
+		place-items: center;
+		padding: 0;
+		border: 0;
+		border-radius: 50%;
+		background: transparent;
+		color: var(--ink);
+		cursor: pointer;
+		opacity: 0.7;
+		transition:
+			opacity 150ms ease,
+			background-color 150ms ease;
+	}
+	.close:hover,
+	.close:focus-visible {
+		opacity: 1;
+		background: rgba(120, 90, 60, 0.08);
+		outline: none;
+	}
+	.close path,
+	.status path {
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.7;
+		stroke-linecap: round;
 	}
 	textarea {
+		flex: 1;
 		width: 100%;
-		min-height: 260px;
-		max-height: 60dvh;
-		resize: vertical;
-		padding: 10px;
-		border: 1px solid var(--line);
-		border-radius: var(--radius);
-		background: var(--bg);
+		min-height: 0;
+		resize: none;
+		margin: 0;
+		padding: 0 2px;
+		border: 0;
+		outline: none;
+		/* Faint ink rules, one per line, that scroll with the text. */
+		--rule: 28px;
+		background: repeating-linear-gradient(
+			to bottom,
+			transparent 0,
+			transparent calc(var(--rule) - 1px),
+			rgba(150, 110, 70, 0.22) calc(var(--rule) - 1px),
+			rgba(150, 110, 70, 0.22) var(--rule)
+		);
+		background-attachment: local;
+		color: var(--ink);
 		font: inherit;
 		font-size: 16px; /* 16px stops iOS zooming in on focus */
-		line-height: 1.5;
+		line-height: var(--rule);
 	}
-	textarea:focus-visible {
-		outline: 2px solid var(--ink);
-		outline-offset: -1px;
+	textarea::placeholder {
+		color: rgba(58, 47, 38, 0.45);
 	}
 	textarea:disabled {
-		color: var(--muted);
+		color: rgba(58, 47, 38, 0.5);
 	}
 	.status {
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
 		gap: 4px;
-		min-height: 18px;
-		margin: 0;
-		font-size: 13px;
-		color: var(--muted);
+		min-height: 24px;
+		margin: 2px 0 0;
+		font-family: 'Cedarville Cursive', cursive;
+		font-size: 17px;
+		color: rgba(58, 47, 38, 0.65);
 	}
 	.status.error {
 		color: var(--error);
 	}
-	@keyframes slide-in {
-		from {
-			opacity: 0;
-			transform: translateX(16px);
-		}
-	}
+
 	/* Phones and narrow windows: centred over the tree. */
 	@media (max-width: 760px) {
 		dialog {
 			margin: auto;
-		}
-		dialog[open] {
-			animation-name: rise;
-		}
-		textarea {
-			min-height: 200px;
-		}
-	}
-	@keyframes rise {
-		from {
-			opacity: 0;
-			transform: translateY(12px);
+			--h: min(520px, calc(100dvh - 120px));
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {
-		dialog[open] {
-			animation: none;
+		.sheet,
+		.roll.bottom,
+		.writing,
+		.unrolled .writing {
+			transition: none;
 		}
 	}
 </style>
