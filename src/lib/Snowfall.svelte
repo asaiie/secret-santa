@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { paintCrystal, paintDot, type Sprite } from './watercolor.ts';
 
-	/** Ambient snow drifting down behind the page. Purely decorative. */
+	/** Ambient watercolor snow drifting down behind the page. Purely decorative. */
 	let { density = 1 }: { density?: number } = $props();
 
 	let canvas: HTMLCanvasElement;
@@ -10,13 +11,13 @@
 	type Flake = {
 		x: number;
 		y: number;
-		r: number; // radius in CSS px
+		r: number; // drawn radius in CSS px
 		depth: number; // 0 (far) .. 1 (near): drives speed, size, opacity
 		speed: number;
 		swayPhase: number;
 		swaySpeed: number;
 		swayAmp: number;
-		crystal: boolean;
+		sprite: Sprite;
 		angle: number;
 		spin: number;
 	};
@@ -24,6 +25,12 @@
 	onMount(() => {
 		const ctx = canvas.getContext('2d')!;
 		const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+		// Paint a small set of unique flakes once; every falling flake reuses one.
+		const dots = Array.from({ length: 10 }, paintDot);
+		const crystals = Array.from({ length: 8 }, paintCrystal);
+		const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
+
 		let width = 0;
 		let height = 0;
 		let flakes: Flake[] = [];
@@ -31,21 +38,21 @@
 		let last = performance.now();
 
 		const makeFlake = (anywhere: boolean): Flake => {
-			const depth = Math.random() ** 1.6; // more far flakes than near ones
-			const crystal = depth > 0.55 && Math.random() < 0.35;
-			const r = crystal ? 4 + depth * 5 : 1 + depth * 2.6;
+			const depth = Math.random() ** 1.5; // more far flakes than near ones
+			const crystal = depth > 0.45 && Math.random() < 0.4;
+			const r = crystal ? 8 + depth * 10 : 2.5 + depth * 4.5;
 			return {
 				x: Math.random() * width,
-				y: anywhere ? Math.random() * height : -r * 2 - Math.random() * 40,
+				y: anywhere ? Math.random() * height : -r * 3 - Math.random() * 40,
 				r,
 				depth,
-				speed: 12 + depth * 38, // px per second
+				speed: 12 + depth * 36, // px per second
 				swayPhase: Math.random() * Math.PI * 2,
 				swaySpeed: 0.3 + Math.random() * 0.5,
 				swayAmp: 8 + depth * 22,
-				crystal,
-				angle: Math.random() * Math.PI,
-				spin: (Math.random() - 0.5) * 0.4
+				sprite: crystal ? pick(crystals) : pick(dots),
+				angle: Math.random() * Math.PI * 2,
+				spin: (Math.random() - 0.5) * (crystal ? 0.5 : 0.2)
 			};
 		};
 
@@ -56,55 +63,31 @@
 			canvas.width = width * dpr;
 			canvas.height = height * dpr;
 			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-			// About one flake per 14k px², capped so big screens stay calm.
-			const target = Math.min(140, Math.round(((width * height) / 14000) * density));
+			ctx.imageSmoothingQuality = 'high';
+			// About one flake per 16k px², capped so big screens stay calm.
+			const target = Math.min(120, Math.round(((width * height) / 16000) * density));
 			while (flakes.length < target) flakes.push(makeFlake(true));
 			flakes.length = target;
 		};
 
-		const drawCrystal = (f: Flake, x: number, y: number) => {
-			ctx.save();
-			ctx.translate(x, y);
-			ctx.rotate(f.angle);
-			ctx.lineWidth = 1.1;
-			ctx.lineCap = 'round';
-			ctx.beginPath();
-			for (let i = 0; i < 6; i++) {
-				const a = (i * Math.PI) / 3;
-				const cx = Math.cos(a);
-				const sy = Math.sin(a);
-				ctx.moveTo(0, 0);
-				ctx.lineTo(cx * f.r, sy * f.r);
-				// small V near each tip
-				const bx = cx * f.r * 0.6;
-				const by = sy * f.r * 0.6;
-				const t = f.r * 0.28;
-				ctx.moveTo(bx, by);
-				ctx.lineTo(bx + Math.cos(a + 0.7) * t, by + Math.sin(a + 0.7) * t);
-				ctx.moveTo(bx, by);
-				ctx.lineTo(bx + Math.cos(a - 0.7) * t, by + Math.sin(a - 0.7) * t);
-			}
-			ctx.stroke();
-			ctx.restore();
-		};
-
 		const draw = (dt: number, t: number) => {
+			const dpr = canvas.width / width;
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 			ctx.clearRect(0, 0, width, height);
 			for (const f of flakes) {
 				f.y += f.speed * dt;
 				f.angle += f.spin * dt;
-				if (f.y - f.r > height) Object.assign(f, makeFlake(false));
+				if (f.y - f.r * 2 > height) Object.assign(f, makeFlake(false));
 				const x = f.x + Math.sin(t * f.swaySpeed + f.swayPhase) * f.swayAmp;
-				const alpha = 0.25 + f.depth * 0.55;
-				ctx.fillStyle = ctx.strokeStyle = `rgba(150, 172, 196, ${alpha})`;
-				if (f.crystal) {
-					drawCrystal(f, x, f.y);
-				} else {
-					ctx.beginPath();
-					ctx.arc(x, f.y, f.r, 0, Math.PI * 2);
-					ctx.fill();
-				}
+				const scale = f.r / f.sprite.radius;
+				const s = f.sprite.size * scale;
+				ctx.globalAlpha = 0.55 + f.depth * 0.45;
+				ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+				ctx.translate(x, f.y);
+				ctx.rotate(f.angle);
+				ctx.drawImage(f.sprite.canvas, -s / 2, -s / 2, s, s);
 			}
+			ctx.globalAlpha = 1;
 		};
 
 		const loop = (now: number) => {
@@ -156,6 +139,8 @@
 		z-index: 0;
 		opacity: 0;
 		transition: opacity 1.2s ease;
+		/* Paint glazes over whatever is behind it, like watercolor on paper. */
+		mix-blend-mode: multiply;
 	}
 	canvas.visible {
 		opacity: 1;
