@@ -22,5 +22,7 @@ export const api = {
 		request<{ name: Name }>('/api/set-password', { name, password }),
 	login: (name: Name, password: string) => request<{ name: Name }>('/api/login', { name, password }),
 	logout: () => request<{ ok: true }>('/api/logout', {}),
-	draw: () => request<{ ok: true }>('/api/draw', {})
+	draw: () => request<{ ok: true }>('/api/draw', {}),
+	wishlist: () => request<{ text: string; updatedAt: string | null }>('/api/wishlist'),
+	saveWishlist: (text: string) => request<{ updatedAt: string | null }>('/api/wishlist', { text })
 };

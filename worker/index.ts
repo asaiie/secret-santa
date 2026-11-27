@@ -1,4 +1,4 @@
-import { ADMIN, NAMES, isName, type Name } from '../src/lib/names.ts';
+import { ADMIN, NAMES, WISHLIST_MAX, isName, type Name } from '../src/lib/names.ts';
 
 interface Env {
 	ASSETS: Fetcher;
@@ -39,6 +39,15 @@ async function route(req: Request, env: Env, path: string): Promise<Response> {
 		const name = await currentUser(req, env);
 		const drawn = await isDrawn(env);
 		return json({ name, isAdmin: name === ADMIN, drawn });
+	}
+
+	if (method === 'GET' && path === '/api/wishlist') {
+		const name = await requireUser(req, env);
+		// Your own wishlist only.
+		const row = await env.DB.prepare('SELECT text, updated_at FROM wishlists WHERE name = ?')
+			.bind(name)
+			.first<{ text: string; updated_at: string }>();
+		return json({ text: row?.text ?? '', updatedAt: row?.updated_at ?? null });
 	}
 
 	if (method === 'GET' && path === '/api/recipient') {
@@ -84,6 +93,23 @@ async function route(req: Request, env: Env, path: string): Promise<Response> {
 			return json({ ok: true }, 200, {
 				'set-cookie': `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`
 			});
+		}
+
+		if (path === '/api/wishlist') {
+			const name = await requireUser(req, env);
+			const body = (await req.json().catch(() => null)) as { text?: unknown } | null;
+			if (typeof body?.text !== 'string') throw new HttpError(400, 'Expected text');
+			if (body.text.length > WISHLIST_MAX) {
+				throw new HttpError(400, `Wishlist is limited to ${WISHLIST_MAX} characters`);
+			}
+			const row = await env.DB.prepare(
+				`INSERT INTO wishlists (name, text, updated_at) VALUES (?, ?, datetime('now'))
+				 ON CONFLICT(name) DO UPDATE SET text = excluded.text, updated_at = excluded.updated_at
+				 RETURNING updated_at`
+			)
+				.bind(name, body.text)
+				.first<{ updated_at: string }>();
+			return json({ updatedAt: row?.updated_at ?? null });
 		}
 
 		if (path === '/api/draw') {
