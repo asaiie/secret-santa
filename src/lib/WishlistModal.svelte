@@ -202,8 +202,9 @@
 		background: transparent;
 		overflow: visible;
 	}
+	/* No tint: the page stays as it is. The invisible backdrop still catches outside clicks. */
 	dialog::backdrop {
-		background: rgba(32, 33, 31, 0.18);
+		background: transparent;
 	}
 	.scroll {
 		position: relative;
