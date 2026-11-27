@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { api } from './api.ts';
-	import { playEnvelopeOpening, type Opening } from './envelope/index.ts';
+	import { openingEnvelopeAnchor, playEnvelopeOpening, propEnvelopeAnchor, type Opening } from './envelope/index.ts';
+	import { propCanvasEl } from './propCanvases.ts';
 
 	/**
-	 * Opens the envelope: the seal breaks, the flap lifts and a card slides out with your
-	 * giftee's name and wishlist. Left side on desktop, centred on phones. Click during
+	 * Opens the envelope: the one by the tree flies over and grows, then the seal breaks,
+	 * the flap lifts and a card slides out with your giftee's name and wishlist. Left side on desktop, centred on phones. Click during
 	 * the animation to skip it; close with the X, a click outside, or Esc.
 	 */
 	let {
@@ -25,6 +26,9 @@
 	let done = false;
 	let closing = $state(false);
 	let closeTimer = 0;
+	let flight: HTMLCanvasElement | null = null;
+	let hiddenProp: HTMLElement | null = null;
+	const GLOW = 'drop-shadow(0 0 5px rgba(255, 199, 66, 0.75)) drop-shadow(0 0 16px rgba(255, 183, 40, 0.45))';
 
 	const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -33,12 +37,18 @@
 		else if (!open && dialog.open) requestClose();
 	});
 
-	function show() {
+	async function show() {
 		clearTimeout(closeTimer);
 		closing = false;
 		done = false;
 		dialog.showModal();
+		await flyIn();
+		if (!dialog.open || closing) return; // closed during the flight
 		opening = playEnvelopeOpening(stage, { seed, onDone: () => revealClose() });
+		// The animation's first frame now matches the flown copy exactly; swap them.
+		stage.style.visibility = '';
+		flight?.remove();
+		flight = null;
 		addCloseButton(opening.textArea.parentElement!);
 		// Fetch while the seal breaks; the card's text fades in near the end anyway.
 		const area = opening.textArea;
@@ -49,6 +59,62 @@
 		api.giftee()
 			.then((res) => fill(area, res.giftee))
 			.catch(() => fill(area, undefined));
+	}
+
+	/**
+	 * Lift a copy of the envelope by the tree and glide it into place, growing, to exactly
+	 * where the opening animation's envelope starts (same painting, same seed and tilt).
+	 */
+	async function flyIn() {
+		const src = propCanvasEl('envelope');
+		const button = src?.closest<HTMLElement>('.prop');
+		if (!src || !button || reduceMotion()) return;
+		const from = src.getBoundingClientRect();
+		const a = propEnvelopeAnchor(from);
+		const b = openingEnvelopeAnchor(stage.getBoundingClientRect());
+		const copy = document.createElement('canvas');
+		copy.width = src.width;
+		copy.height = src.height;
+		copy.getContext('2d')!.drawImage(src, 0, 0);
+		Object.assign(copy.style, {
+			position: 'fixed',
+			left: `${from.left}px`,
+			top: `${from.top}px`,
+			width: `${from.width}px`,
+			height: `${from.height}px`,
+			transformOrigin: `${a.x - from.left}px ${a.y - from.top}px`,
+			pointerEvents: 'none'
+		});
+		// Inside the dialog so it's drawn in the top layer, above the page.
+		dialog.appendChild(copy);
+		flight = copy;
+		stage.style.visibility = 'hidden';
+		button.style.visibility = 'hidden';
+		hiddenProp = button;
+		const k = b.unit / a.unit;
+		await copy
+			.animate(
+				[
+					{ transform: 'translate(0, 0) scale(1)', filter: GLOW },
+					{ transform: `translate(${b.x - a.x}px, ${b.y - a.y}px) scale(${k})`, filter: 'none' }
+				],
+				{ duration: 560, easing: 'cubic-bezier(0.3, 0.7, 0.2, 1)', fill: 'forwards' }
+			)
+			.finished.catch(() => {});
+	}
+
+	/** Put the envelope back by the tree, fading in. */
+	function restoreProp() {
+		const button = hiddenProp;
+		hiddenProp = null;
+		if (!button) return;
+		button.style.visibility = '';
+		const canvas = button.querySelector('canvas');
+		if (canvas && !reduceMotion()) {
+			canvas.style.animation = 'none';
+			void canvas.offsetWidth; // restart the fade
+			canvas.style.animation = 'prop-fade-in 500ms ease-out both';
+		}
 	}
 
 	// The card box is built by the animation; put a painted-ink X in its top-left corner
@@ -127,6 +193,10 @@
 	}
 
 	function onClose() {
+		flight?.remove();
+		flight = null;
+		stage.style.visibility = '';
+		restoreProp();
 		opening?.destroy();
 		opening = null;
 		closeButton = null;
@@ -204,7 +274,7 @@
 	}
 	.stage :global(.ss-name) {
 		flex: none;
-		height: 56px;
+		height: 84px; /* the name's two rows, plus one empty row before the list */
 		padding-top: 6px;
 		font: 40px/56px 'Cedarville Cursive', cursive;
 		white-space: nowrap;

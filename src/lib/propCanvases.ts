@@ -21,5 +21,8 @@ export function propCanvas(key: string, paint: Painter, animate: boolean): HTMLC
 	return entry.canvas;
 }
 
+/** A prop's painted canvas, if it has been painted this page load. */
+export const propCanvasEl = (key: string) => cache.get(key)?.canvas;
+
 /** The seed a prop was painted with this page load (undefined if not painted yet). */
 export const propSeed = (key: string) => cache.get(key)?.seed;
