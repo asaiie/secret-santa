@@ -7,6 +7,8 @@
  * - tree tasks draw in the original 900×1200 scene space, scaled to fit and centred.
  */
 
+import { SCENE, computeLayout } from './layout.ts';
+
 type Pt = [number, number];
 type Hsl = [number, number, number];
 type WashOpts = {
@@ -21,13 +23,11 @@ type WashOpts = {
 };
 
 /* ---------- scene geometry (900×1200 space) ---------- */
-const cx = 450;
+const cx = SCENE.cx;
 const top = 200;
 const base = 905;
 const maxW = 330;
 const halfAt = (y: number) => ((y - top) / (base - top)) * maxW;
-// What has to stay visible: star glow at the top, gifts at the sides, ground at the bottom.
-const BOUNDS = { x0: 140, x1: 780, y0: 30, y1: 1100 };
 
 const GREENS: Hsl[] = [
 	[150, 48, 24],
@@ -65,14 +65,17 @@ function mulberry(seed: number) {
  * - instant: all at once
  */
 export type PaintMode = 'live' | 'quick' | 'instant';
-export type PaintOptions = { seed: number; mode: PaintMode; tree: boolean };
+export type PaintOptions = { seed: number; mode: PaintMode; tree: boolean; onDone?: () => void };
 
 /**
  * Paints the background (paper, splotches, snow, grain), plus the tree if `tree` is set.
  * The background uses its own random stream, so the same seed gives identical splotches
  * with or without the tree. Returns a function that stops an in-progress paint.
  */
-export function paintTree(canvas: HTMLCanvasElement, { seed, mode, tree }: PaintOptions): () => void {
+export function paintTree(
+	canvas: HTMLCanvasElement,
+	{ seed, mode, tree, onDone }: PaintOptions
+): () => void {
 	const ctx = canvas.getContext('2d')!;
 	const bgRnd = mulberry(seed);
 	const treeRnd = mulberry(seed ^ 0x5bd1e995);
@@ -95,11 +98,7 @@ export function paintTree(canvas: HTMLCanvasElement, { seed, mode, tree }: Paint
 	canvas.width = Math.round(VW * dpr);
 	canvas.height = Math.round(VH * dpr);
 
-	const sw = BOUNDS.x1 - BOUNDS.x0;
-	const sh = BOUNDS.y1 - BOUNDS.y0;
-	const s = Math.min((VW * 0.92) / sw, (VH * 0.92) / sh);
-	const ox = VW / 2 - cx * s;
-	const oy = VH / 2 - (BOUNDS.y0 + sh / 2) * s + VH * 0.02;
+	const { s, ox, oy } = computeLayout(VW, VH);
 
 	const tasks: (() => void)[] = [];
 	const screen = () => ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -695,6 +694,7 @@ export function paintTree(canvas: HTMLCanvasElement, { seed, mode, tree }: Paint
 
 	if (mode === 'instant') {
 		tasks.forEach((task) => task());
+		onDone?.();
 		return () => {};
 	}
 
@@ -708,11 +708,13 @@ export function paintTree(canvas: HTMLCanvasElement, { seed, mode, tree }: Paint
 			// One wash at a time so the picture builds up like it's being painted.
 			tasks[i++]();
 			if (i < tasks.length) timer = window.setTimeout(() => (frame = requestAnimationFrame(step)), 45);
+			else onDone?.();
 		} else {
 			// A few milliseconds of work per frame keeps animations elsewhere smooth.
 			const start = performance.now();
 			while (i < tasks.length && performance.now() - start < 8) tasks[i++]();
 			if (i < tasks.length) frame = requestAnimationFrame(step);
+			else onDone?.();
 		}
 	};
 	frame = requestAnimationFrame(step);
