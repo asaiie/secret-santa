@@ -41,12 +41,14 @@
 
 <!-- Shown to everyone; what they do will depend on being signed in (not wired up yet). -->
 {#if scene.treeDone && scene.envelope && scene.scroll}
-	<PropButton prop={scene.envelope} caption="Giftee" label="See who you're giving a gift to" paint={paintEnvelope} />
+	<PropButton prop={scene.envelope} caption="Giftee" label="See who you're giving a gift to" paint={paintEnvelope} paintKey="envelope" animate={scene.treeLive} />
 	<PropButton
 		prop={scene.scroll}
 		caption="Wishlist"
 		label="Your wishlist"
 		paint={paintScroll}
+		paintKey="scroll"
+		animate={scene.treeLive}
 		onclick={openWishlist}
 	/>
 {/if}

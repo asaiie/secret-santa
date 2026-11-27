@@ -43,7 +43,15 @@
 			placeTitle();
 			stops = [
 				paintTree(plain, { seed, tree: false, mode: plainMode }),
-				paintTree(withTree, { seed, tree: true, mode: treeMode, onDone: () => (scene.treeDone = true) })
+				paintTree(withTree, {
+					seed,
+					tree: true,
+					mode: treeMode,
+					onDone: () => {
+						scene.treeLive = treeMode === 'live';
+						scene.treeDone = true;
+					}
+				})
 			];
 		};
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Prop } from './layout.ts';
+	import { propCanvas, type Painter } from './propCanvases.ts';
 
 	/** A painted prop that works as a button: gold glow, grows and glows brighter on hover. */
 	let {
@@ -9,6 +10,8 @@
 		captionAt = 91,
 		label,
 		paint,
+		paintKey,
+		animate = false,
 		onclick
 	}: {
 		prop: Prop;
@@ -18,13 +21,20 @@
 		captionAt?: number;
 		/** Fuller description for screen readers. */
 		label: string;
-		paint: (canvas: HTMLCanvasElement) => void;
+		paint: Painter;
+		/** Identifies this prop's painting, which is kept for the whole page load. */
+		paintKey: string;
+		/** Paint it in step by step (first time only). */
+		animate?: boolean;
 		onclick?: () => void;
 	} = $props();
 
-	let canvas: HTMLCanvasElement;
+	let holder: HTMLSpanElement;
 
-	onMount(() => paint(canvas));
+	// Reuse the painting from earlier in this page load if there is one.
+	onMount(() => {
+		holder.appendChild(propCanvas(paintKey, paint, animate));
+	});
 </script>
 
 <button
@@ -39,7 +49,7 @@
 	<!-- Caption and painting scale together as one piece. -->
 	<span class="art">
 		<span class="caption" style:bottom="{captionAt}%" aria-hidden="true">{caption}</span>
-		<canvas bind:this={canvas} aria-hidden="true"></canvas>
+		<span class="holder" bind:this={holder}></span>
 	</span>
 </button>
 
@@ -78,7 +88,12 @@
 		white-space: nowrap;
 		transition: color 220ms ease;
 	}
-	canvas {
+	.holder :global(canvas) {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+	.holder {
 		display: block;
 		width: 100%;
 		height: 100%;
@@ -94,8 +109,8 @@
 	.prop:focus-visible .caption {
 		color: var(--ink);
 	}
-	.prop:hover canvas,
-	.prop:focus-visible canvas {
+	.prop:hover .holder,
+	.prop:focus-visible .holder {
 		filter: drop-shadow(0 0 8px rgba(255, 206, 80, 0.98)) drop-shadow(0 0 28px rgba(255, 186, 45, 0.75))
 			drop-shadow(0 0 48px rgba(255, 176, 30, 0.35));
 	}
