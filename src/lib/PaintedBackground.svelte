@@ -9,7 +9,7 @@
 	 *
 	 * Two stacked canvases share one seed, so their splotches are identical:
 	 * - `plain`: paper, splotches, snow, grain
-	 * - `withTree`: the same plus the Christmas tree, faded in on the home page
+	 * - `withTree`: the same plus the Christmas tree, shown only on the home page
 	 */
 	let plain: HTMLCanvasElement;
 	let withTree: HTMLCanvasElement;
@@ -69,10 +69,9 @@
 		pointer-events: none;
 	}
 	.tree {
-		opacity: 0;
-		transition: opacity 500ms ease;
+		visibility: hidden;
 	}
 	.tree.shown {
-		opacity: 1;
+		visibility: visible;
 	}
 </style>
