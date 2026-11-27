@@ -31,7 +31,6 @@
 </script>
 
 <div class="content">
-<h1 class="visually-hidden">AJ Rhabdo Secret Santa 2026</h1>
 {#if session.me?.name}
 	{#if session.me.drawn}
 		{#if recipient}
@@ -51,14 +50,5 @@
 	.content {
 		position: relative;
 		z-index: 1; /* above the painting */
-	}
-	/* The title is painted on the canvas; this keeps it readable for screen readers. */
-	.visually-hidden {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip-path: inset(50%);
-		white-space: nowrap;
 	}
 </style>

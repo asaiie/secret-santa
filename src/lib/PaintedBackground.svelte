@@ -1,9 +1,7 @@
 <script lang="ts">
-	import '@fontsource/pinyon-script/400.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { computeLayout } from './layout.ts';
-	import { paintInk, TITLE_FONT } from './paintInk.ts';
 	import { paintTree, type PaintMode } from './paintTree.ts';
 
 	/**
@@ -13,38 +11,40 @@
 	 * Two stacked canvases share one seed, so their splotches are identical:
 	 * - `plain`: paper, splotches, snow, grain
 	 * - `withTree`: the same plus the Christmas tree, shown only on the home page
-	 * Plus `title`: the calligraphy, written in once the tree is finished.
+	 * Plus the title, which fades in above the tree once it's finished.
 	 */
 	let plain: HTMLCanvasElement;
 	let withTree: HTMLCanvasElement;
-	let title: HTMLCanvasElement;
+	let titleY = $state(0);
+	let titleH = $state(0);
+	let titleIn = $state(false);
+	let titleAnimate = $state(true);
 
 	const showTree = $derived(page.url.pathname === '/');
 
 	onMount(() => {
 		const seed = Math.floor(Math.random() * 9000) + 1000;
 		const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-		const fontReady = document.fonts.load(`100px "${TITLE_FONT}"`).catch(() => {});
 		let stops: (() => void)[] = [];
-		let cancelled = false;
 
-		const writeTitle = async (animate: boolean) => {
-			await fontReady;
-			if (cancelled) return;
-			const box = computeLayout(window.innerWidth, window.innerHeight).title;
-			stops.push(paintInk(title, box, { seed, animate }));
+		const placeTitle = () => {
+			({ titleY, titleH } = computeLayout(window.innerWidth, window.innerHeight));
 		};
 
 		const paintAll = (plainMode: PaintMode, treeMode: PaintMode) => {
 			stops.forEach((stop) => stop());
+			placeTitle();
 			stops = [
 				paintTree(plain, { seed, tree: false, mode: plainMode }),
 				paintTree(withTree, {
 					seed,
 					tree: true,
 					mode: treeMode,
-					// Write the title as the last stroke, only if the tree was painted on screen.
-					onDone: () => writeTitle(treeMode === 'live')
+					// Fade the title in as the finishing touch, only if the tree was painted on screen.
+					onDone: () => {
+						titleAnimate = treeMode === 'live';
+						titleIn = true;
+					}
 				})
 			];
 		};
@@ -71,7 +71,6 @@
 		window.addEventListener('resize', onResize);
 
 		return () => {
-			cancelled = true;
 			stops.forEach((stop) => stop());
 			clearTimeout(timer);
 			window.removeEventListener('resize', onResize);
@@ -81,7 +80,16 @@
 
 <canvas bind:this={plain} aria-hidden="true"></canvas>
 <canvas bind:this={withTree} class="tree" class:shown={showTree} aria-hidden="true"></canvas>
-<canvas bind:this={title} class="title tree" class:shown={showTree} aria-hidden="true"></canvas>
+<h1
+	class="title"
+	class:shown={showTree}
+	class:in={titleIn}
+	class:animate={titleAnimate}
+	style:top="{titleY}px"
+	style:height="{titleH}px"
+>
+	AJ Rhabdo Secret Santa 2026
+</h1>
 
 <style>
 	canvas {
@@ -93,16 +101,37 @@
 		z-index: 0;
 		pointer-events: none;
 	}
-	.title {
-		/* Positioned and sized over the title box by paintInk. */
-		inset: auto;
-		width: 0;
-		height: 0;
-	}
 	.tree {
 		visibility: hidden;
 	}
 	.tree.shown {
 		visibility: visible;
+	}
+	.title {
+		position: fixed;
+		left: 0;
+		right: 0;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin: 0;
+		padding: 0 16px;
+		font-size: clamp(18px, 2.2vw, 26px);
+		font-weight: 500;
+		letter-spacing: -0.01em;
+		white-space: nowrap;
+		pointer-events: none;
+		visibility: hidden;
+		opacity: 0;
+	}
+	.title.shown {
+		visibility: visible;
+	}
+	.title.in {
+		opacity: 1;
+	}
+	.title.in.animate {
+		transition: opacity 1.2s ease;
 	}
 </style>
