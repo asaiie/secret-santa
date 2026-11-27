@@ -153,8 +153,44 @@
 			return;
 		}
 		const list = el('ul', 'ss-list');
-		for (const item of items) list.append(el('li', '', item));
+		for (const item of items) {
+			const li = el('li', '');
+			li.append(...linkify(item));
+			list.append(li);
+		}
 		area.append(list);
+	}
+
+	/**
+	 * Turns web addresses in a wishlist line into links (new tab), leaving the rest as text.
+	 * Only http(s) URLs; everything goes in via textContent/href, never as HTML.
+	 */
+	function linkify(line: string): Node[] {
+		const out: Node[] = [];
+		const re = /https?:\/\/[^\s<>"]+[^\s<>".,;:!?)\]]/gi;
+		let last = 0;
+		for (const m of line.matchAll(re)) {
+			let url: URL;
+			try {
+				url = new URL(m[0]);
+			} catch {
+				continue;
+			}
+			if (m.index! > last) out.push(document.createTextNode(line.slice(last, m.index)));
+			const a = document.createElement('a');
+			a.className = 'ss-link';
+			a.href = url.href;
+			a.target = '_blank';
+			a.rel = 'noopener noreferrer';
+			a.title = url.href;
+			// Short, readable label: site + page, without "www." or the query string.
+			const label = url.hostname.replace(/^www\./, '') + url.pathname.replace(/\/$/, '');
+			a.textContent = label.length > 42 ? label.slice(0, 41) + '…' : label;
+			out.push(a);
+			last = m.index! + m[0].length;
+		}
+		if (last < line.length) out.push(document.createTextNode(line.slice(last)));
+		return out;
 	}
 
 	/** Slide the card away, then close the dialog. */
@@ -278,6 +314,19 @@
 		height: 5px;
 		border-radius: 50%;
 		background: rgba(143, 29, 44, 0.55);
+	}
+	.stage :global(.ss-list li) {
+		overflow-wrap: anywhere; /* long words wrap onto the next ruled line */
+	}
+	.stage :global(.ss-link) {
+		color: #8f1d2c;
+		text-decoration: underline;
+		text-decoration-color: rgba(143, 29, 44, 0.35);
+		text-underline-offset: 3px;
+	}
+	.stage :global(.ss-link:hover),
+	.stage :global(.ss-link:focus-visible) {
+		text-decoration-color: currentColor;
 	}
 	.stage :global(.ss-empty) {
 		color: rgba(58, 47, 38, 0.6);
