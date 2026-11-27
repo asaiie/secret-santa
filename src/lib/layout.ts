@@ -15,7 +15,20 @@ export type Layout = {
 	/** The band the title sits in, in viewport px. */
 	titleY: number;
 	titleH: number;
+	/** The envelope (left) and scroll (right) buttons: centre and size in viewport px. */
+	envelope: Prop;
+	scroll: Prop;
 };
+
+export type Prop = { x: number; y: number; size: number };
+
+/**
+ * Props sit beside the lowest green tier, their inner edge just overlapping the
+ * branches. Scene coords; see paintTree.ts (tree spans y 200–905, widest at the base).
+ */
+const PROP_Y = 800;
+const PROP_DX = 345; // from the trunk to each prop's centre
+const PROP_SIZE = 180;
 
 /** Height of the notch / status bar inset, from the --safe-top CSS variable. */
 export function safeTop(): number {
@@ -34,11 +47,15 @@ export function computeLayout(VW: number, VH: number, insetTop = 0): Layout {
 	// Any spare height mostly goes below, keeping everything near the top.
 	const free = Math.max(0, VH - top - titleH - sh * s);
 	const titleY = top + free * 0.12;
-	return {
-		s,
-		ox: VW / 2 - SCENE.cx * s,
-		oy: titleY + titleH - SCENE.y0 * s,
-		titleY,
-		titleH
+	const ox = VW / 2 - SCENE.cx * s;
+	const oy = titleY + titleH - SCENE.y0 * s;
+	// On narrow screens the tree fills the width, so props tuck in over the branches
+	// rather than running off the edge.
+	const size = Math.min(PROP_SIZE * s, VW * 0.24, 170);
+	const prop = (dx: number): Prop => {
+		const margin = size / 2 + 6;
+		const x = Math.min(VW - margin, Math.max(margin, ox + (SCENE.cx + dx) * s));
+		return { x, y: oy + PROP_Y * s, size };
 	};
+	return { s, ox, oy, titleY, titleH, envelope: prop(-PROP_DX), scroll: prop(PROP_DX) };
 }

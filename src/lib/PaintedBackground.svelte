@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { computeLayout, safeTop } from './layout.ts';
 	import { paintTree, type PaintMode } from './paintTree.ts';
+	import { scene } from './scene.svelte.ts';
 
 	/**
 	 * The watercolor backdrop for every page. Lives in the layout so it survives
@@ -30,7 +31,10 @@
 		let stops: (() => void)[] = [];
 
 		const placeTitle = () => {
-			({ titleY, titleH } = computeLayout(plain.clientWidth, plain.clientHeight, safeTop()));
+			const layout = computeLayout(plain.clientWidth, plain.clientHeight, safeTop());
+			({ titleY, titleH } = layout);
+			scene.envelope = layout.envelope;
+			scene.scroll = layout.scroll;
 			titlePlaced = true;
 		};
 
@@ -39,7 +43,7 @@
 			placeTitle();
 			stops = [
 				paintTree(plain, { seed, tree: false, mode: plainMode }),
-				paintTree(withTree, { seed, tree: true, mode: treeMode })
+				paintTree(withTree, { seed, tree: true, mode: treeMode, onDone: () => (scene.treeDone = true) })
 			];
 		};
 

@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { api } from '#lib/api.ts';
 	import { session, refreshSession } from '#lib/session.svelte.ts';
+	import { scene } from '#lib/scene.svelte.ts';
+	import { paintEnvelope, paintScroll } from '#lib/paintProps.ts';
+	import PropButton from '#lib/PropButton.svelte';
 
 	let recipient = $state<string | null>(null);
 	let drawing = $state(false);
@@ -29,6 +32,12 @@
 		}
 	}
 </script>
+
+{#if session.me?.name && scene.treeDone && scene.envelope && scene.scroll}
+	<!-- Not wired up yet. -->
+	<PropButton prop={scene.envelope} label="See who you're giving a gift to" paint={paintEnvelope} />
+	<PropButton prop={scene.scroll} label="Your wishlist" paint={paintScroll} />
+{/if}
 
 <div class="content">
 {#if session.me?.name}
