@@ -37,9 +37,10 @@ export function safeTop(): number {
 }
 
 export function computeLayout(VW: number, VH: number, insetTop = 0): Layout {
-	// Wide enough that a centred title clears the account controls on the right:
-	// line it up with them in the header row. Otherwise sit just below them.
-	const inHeader = VW >= 760;
+	// Wide enough that a centred title clears the account controls on the right
+	// (including the organizer's extra "Run the draw"): line it up with them in the
+	// header row. Otherwise sit just below them.
+	const inHeader = VW >= 960;
 	const top = (inHeader ? 26 : 62) + insetTop;
 	const titleH = inHeader ? 36 : 40;
 	const sw = SCENE.x1 - SCENE.x0;

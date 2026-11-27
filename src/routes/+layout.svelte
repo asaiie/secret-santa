@@ -15,6 +15,22 @@
 
 	onMount(refreshSession);
 
+	let drawing = $state(false);
+
+	// Organizer only (the server checks too). Pairings are never sent to the browser.
+	async function draw() {
+		if (!confirm('Run the draw for everyone? This can only be done once.')) return;
+		drawing = true;
+		try {
+			await api.draw();
+			await refreshSession();
+		} catch (e) {
+			alert((e as Error).message);
+		} finally {
+			drawing = false;
+		}
+	}
+
 	async function signOut() {
 		await api.logout();
 		await refreshSession();
@@ -31,6 +47,11 @@
 		<nav>
 			{#if session.me?.name}
 				<span class="status">{session.me.name}</span>
+				{#if session.me.isAdmin && !session.me.drawn}
+					<button class="btn-ghost" onclick={draw} disabled={drawing}>
+						{drawing ? 'Drawing…' : 'Run the draw'}
+					</button>
+				{/if}
 				<button class="btn-ghost" onclick={signOut}>Sign out</button>
 			{:else}
 				<span class="status">View only</span>

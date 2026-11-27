@@ -202,11 +202,8 @@
 		background: transparent;
 		overflow: visible;
 	}
-	/* A soft white mist over the painting instead of a grey dim. */
 	dialog::backdrop {
-		background: rgba(255, 255, 255, 0.42);
-		-webkit-backdrop-filter: blur(2px);
-		backdrop-filter: blur(2px);
+		background: rgba(32, 33, 31, 0.18);
 	}
 	.scroll {
 		position: relative;
