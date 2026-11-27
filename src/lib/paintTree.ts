@@ -1,5 +1,5 @@
 /**
- * Watercolor Christmas tree, painted live onto a full-screen canvas.
+ * Watercolor background and Christmas tree, painted onto a full-screen canvas.
  *
  * Adapted from Amit's standalone painting. Two coordinate spaces:
  * - background tasks (paper, sky splotches, snow, grain) draw in screen pixels
@@ -59,12 +59,24 @@ function mulberry(seed: number) {
 	};
 }
 
-export type PaintOptions = { seed: number; animate: boolean };
+/**
+ * - live: one wash at a time, so you watch it being painted
+ * - quick: as fast as possible without freezing the page (for a hidden canvas)
+ * - instant: all at once
+ */
+export type PaintMode = 'live' | 'quick' | 'instant';
+export type PaintOptions = { seed: number; mode: PaintMode; tree: boolean };
 
-/** Paints the scene. Returns a function that stops an in-progress animation. */
-export function paintTree(canvas: HTMLCanvasElement, { seed, animate }: PaintOptions): () => void {
+/**
+ * Paints the background (paper, splotches, snow, grain), plus the tree if `tree` is set.
+ * The background uses its own random stream, so the same seed gives identical splotches
+ * with or without the tree. Returns a function that stops an in-progress paint.
+ */
+export function paintTree(canvas: HTMLCanvasElement, { seed, mode, tree }: PaintOptions): () => void {
 	const ctx = canvas.getContext('2d')!;
-	const rnd = mulberry(seed);
+	const bgRnd = mulberry(seed);
+	const treeRnd = mulberry(seed ^ 0x5bd1e995);
+	let rnd = bgRnd;
 	const R = (a = 1, b?: number) => (b === undefined ? rnd() * a : a + rnd() * (b - a));
 	const gauss = () => {
 		let u = 0;
@@ -92,8 +104,8 @@ export function paintTree(canvas: HTMLCanvasElement, { seed, animate }: PaintOpt
 	const tasks: (() => void)[] = [];
 	const screen = () => ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 	const scene = () => ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * ox, dpr * oy);
-	const bg = (fn: () => void) => tasks.push(() => (screen(), fn()));
-	const t = (fn: () => void) => tasks.push(() => (scene(), fn()));
+	const bg = (fn: () => void) => tasks.push(() => (screen(), (rnd = bgRnd), fn()));
+	const t = (fn: () => void) => tasks.push(() => (scene(), (rnd = treeRnd), fn()));
 
 	/* ---------- watercolor core ---------- */
 	// Recursive midpoint displacement: the Tyler Hobbs technique for paint-like edges.
@@ -662,35 +674,46 @@ export function paintTree(canvas: HTMLCanvasElement, { seed, animate }: PaintOpt
 
 	/* ---------- compose + run ---------- */
 	paper();
+	rnd = bgRnd;
 	sky();
-	sketch();
-	ground();
-	trunk();
-	const tiers = 6;
-	for (let i = 0; i < tiers; i++) tier(i, tiers);
-	garlands();
-	lights();
-	baubles();
-	star();
-	gifts();
-	splatter();
+	if (tree) {
+		rnd = treeRnd;
+		sketch();
+		ground();
+		trunk();
+		const tiers = 6;
+		for (let i = 0; i < tiers; i++) tier(i, tiers);
+		garlands();
+		lights();
+		baubles();
+		star();
+		gifts();
+		splatter();
+	}
 	snow();
 	grain();
 
-	if (!animate) {
+	if (mode === 'instant') {
 		tasks.forEach((task) => task());
 		return () => {};
 	}
 
-	// Paint one wash at a time so the picture builds up like it's being painted.
 	let i = 0;
 	let stopped = false;
 	let timer = 0;
 	let frame = 0;
 	const step = () => {
 		if (stopped) return;
-		tasks[i++]();
-		if (i < tasks.length) timer = window.setTimeout(() => (frame = requestAnimationFrame(step)), 45);
+		if (mode === 'live') {
+			// One wash at a time so the picture builds up like it's being painted.
+			tasks[i++]();
+			if (i < tasks.length) timer = window.setTimeout(() => (frame = requestAnimationFrame(step)), 45);
+		} else {
+			// A few milliseconds of work per frame keeps animations elsewhere smooth.
+			const start = performance.now();
+			while (i < tasks.length && performance.now() - start < 8) tasks[i++]();
+			if (i < tasks.length) frame = requestAnimationFrame(step);
+		}
 	};
 	frame = requestAnimationFrame(step);
 	return () => {

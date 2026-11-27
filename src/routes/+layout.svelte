@@ -9,6 +9,7 @@
 	import { page } from '$app/state';
 	import { api } from '#lib/api.ts';
 	import { session, refreshSession } from '#lib/session.svelte.ts';
+	import PaintedBackground from '#lib/PaintedBackground.svelte';
 
 	let { children } = $props();
 
@@ -22,6 +23,8 @@
 </script>
 
 <svelte:head><title>Secret Santa</title></svelte:head>
+
+<PaintedBackground />
 
 <header>
 	{#if session.loaded && page.url.pathname !== '/signin'}
