@@ -13,6 +13,7 @@
 	let gifteeOpen = $state(false);
 	let envelopeShake = $state(0);
 	let gifteeSeed = $state(1);
+	let gifteePreview = $state(false);
 
 	// Props are for signed-in people; anyone else is sent to sign in first.
 	const openWishlist = () => (session.me?.name ? (wishlistOpen = true) : goto('/signin'));
@@ -21,12 +22,14 @@
 		if (!session.me?.name) return goto('/signin');
 		// The draw may have happened since the page loaded.
 		if (!session.me.drawn) await refreshSession();
-		if (session.me?.drawn) {
+		const drawn = !!session.me?.drawn;
+		// Before the draw, the organizer can still open it (with a sample card) to test it.
+		if (drawn || session.me?.isAdmin) {
 			// Same seed as the envelope on the tree, so the one that opens is the one you clicked.
 			gifteeSeed = propSeed('envelope') ?? 1;
+			gifteePreview = !drawn;
 			gifteeOpen = true;
-		}
-		else envelopeShake++; // not yet: just a little shake
+		} else envelopeShake++; // not yet: just a little shake
 	}
 </script>
 
@@ -56,5 +59,5 @@
 
 {#if session.me?.name}
 	<WishlistModal bind:open={wishlistOpen} />
-	<GifteeModal bind:open={gifteeOpen} seed={gifteeSeed} />
+	<GifteeModal bind:open={gifteeOpen} seed={gifteeSeed} preview={gifteePreview} />
 {/if}
